@@ -1,0 +1,18 @@
+*.dcu
+*.ppu
+*.o
+*.a
+*.exe
+*.dll
+*.local
+*.identcache
+*.dsk
+*.res
+# The project resource is an input, not a build product: {$R *.res} in the
+# .dpr needs it, and without it dcc64 stops with E1026.
+!src/GraphBuilder.res
+out/
+lib/
+bin/
+__history/
+__recovery/
