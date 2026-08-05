@@ -935,9 +935,11 @@ begin
                 for J := Low(SArray) to High(SArray) do
                 begin
                   Item := SArray[J];
-                  if Same(Item, FormulaVisible) then Config.Visible := True
+                  if Same(Item, FormulaVisible) then
+                    Config.Visible := True
                   else
-                    if Same(Item, FormulaCorrect) then Config.Correct := True
+                    if Same(Item, FormulaCorrect) then
+                      Config.Correct := True
                   else
                     if Same(Item, FormulaTracing) then Config.Tracing := True;
                 end;
@@ -1166,7 +1168,8 @@ procedure TMain.ApplyEditorTheme;
 var
   Kind: TThemeKind;
 begin
-  if Assigned(Npp) and Npp.DarkMode then Kind := tkDark
+  if Assigned(Npp) and Npp.DarkMode then
+    Kind := tkDark
   else
     Kind := tkLight;
   DarkTheme.ApplyTheme(Self, FGraph, Kind);
@@ -1354,7 +1357,8 @@ begin
   for I := gFormula.FixedRows to gFormula.RowCount - 1 do
   begin
     J := FTraceList.IndexOfName(Encode(gFormula.Formula[I]));
-    if J < 0 then gFormula.Tracing[I] := ''
+    if J < 0 then
+      gFormula.Tracing[I] := ''
     else begin
       S := Trim(Decode({$IFDEF DELPHI_7}FTraceList.ValueFromIndex[J]{$ELSE}GetValueFromIndex(FTraceList,
         J){$ENDIF}));
@@ -2390,7 +2394,8 @@ var
   X, Y, A, B, C, D: string;
   Data: PFormulaData;
 begin
-  if TextUtils.SameText(Trim(TagString), DateTag) then ReplaceText := DateTimeToStr(Now)
+  if TextUtils.SameText(Trim(TagString), DateTag) then
+    ReplaceText := DateTimeToStr(Now)
   else
     if TextUtils.SameText(Trim(TagString), HighPrecisionTag) then
       if FGraph.HighPrecision then
@@ -2645,4 +2650,5 @@ end;
 
 initialization
   RegisterClasses([TSpeedButton, TGroupBox, TLabel, TToolBar, TToolButton]);
+
 end.

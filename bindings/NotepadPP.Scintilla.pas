@@ -68,4 +68,5 @@ const
   SCN_FOCUSOUT = 2029;
 
 implementation
+
 end.

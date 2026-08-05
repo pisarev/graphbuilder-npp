@@ -29,7 +29,10 @@ begin
     if TraceFile = '' then
       TraceFile := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) + 'graphbuilderlaz.log';
     AssignFile(F, TraceFile);
-    if FileExists(TraceFile) then Append(F) else Rewrite(F);
+    if FileExists(TraceFile) then
+      Append(F)
+    else
+      Rewrite(F);
     try
       WriteLn(F, FormatDateTime('hh:nn:ss.zzz', Now), '  ', Text);
     finally
@@ -38,4 +41,5 @@ begin
   except
   end;
 end;
+
 end.

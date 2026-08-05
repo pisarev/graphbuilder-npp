@@ -36,7 +36,10 @@ type
 
 function Pick(const Flag: Boolean; const Yes, No: string): string;
 begin
-  if Flag then Result := Yes else Result := No;
+  if Flag then
+    Result := Yes
+  else
+    Result := No;
 end;
 
 function Web(const Value: TColor): string;
@@ -62,7 +65,8 @@ var
 
   function Linear(const Part: Double): Double;
   begin
-    if Part <= 0.03928 then Result := Part / 12.92
+    if Part <= 0.03928 then
+      Result := Part / 12.92
     else
       Result := Power((Part + 0.055) / 1.055, 2.4);
   end;
@@ -74,7 +78,8 @@ var
 
   function Ratio(const A, B: Double): Double;
   begin
-    if A > B then Result := (A + 0.05) / (B + 0.05)
+    if A > B then
+      Result := (A + 0.05) / (B + 0.05)
     else
       Result := (B + 0.05) / (A + 0.05);
   end;
@@ -115,19 +120,26 @@ begin
     S := 0;
   end
   else begin
-    if L > 0.5 then S := C / (2 - Top - Low) else S := C / (Top + Low);
+    if L > 0.5 then
+      S := C / (2 - Top - Low)
+    else
+      S := C / (Top + Low);
     if Top = R then
     begin
       H := (G - B) / C;
       if G < B then H := H + 6;
     end
-    else if Top = G then H := (B - R) / C + 2
+    else if Top = G then
+      H := (B - R) / C + 2
     else
       H := (R - G) / C + 4;
     H := H / 6;
   end;
   if Dark and (S < DarkSat) and (C > 0) then S := DarkSat;
-  if Dark then Back := DarkBack else Back := LightBack;
+  if Dark then
+    Back := DarkBack
+  else
+    Back := LightBack;
   Steps := 0;
   repeat
     if S = 0 then
@@ -137,7 +149,10 @@ begin
       Bv := Rv;
     end
     else begin
-      if L < 0.5 then Q := L * (1 + S) else Q := L + S - L * S;
+      if L < 0.5 then
+        Q := L * (1 + S)
+      else
+        Q := L + S - L * S;
       P := 2 * L - Q;
       Rv := Byte255(Channel(H + 1 / 3));
       Gv := Byte255(Channel(H));
@@ -145,7 +160,10 @@ begin
     end;
     Bright := Shine(Rv, Gv, Bv);
     if Ratio(Bright, Back) >= Target then Break;
-    if Dark then L := L + Step else L := L - Step;
+    if Dark then
+      L := L + Step
+    else
+      L := L - Step;
     Inc(Steps);
     if (L >= 1) or (L <= 0) then
     begin
@@ -255,7 +273,8 @@ begin
     for J := Low(Points) to High(Points) - 1 do
       if (Points[J].Y = 0) or ((Points[J].Y < 0) <> (Points[J + 1].Y < 0)) then
       begin
-        if Points[J].Y = 0 then Root := Points[J].X
+        if Points[J].Y = 0 then
+          Root := Points[J].X
         else
           Root := RefineRoot(Graph, Graph.SA[Data.ScriptIndex], Points[J].X, Points[J + 1].X);
         if Result <> '' then Result := Result + ChipSeparator;
@@ -318,8 +337,10 @@ begin
     Start := Points[0].X;
     for J := Low(Points) to High(Points) - 1 do
     begin
-      if Points[J + 1].Y > Points[J].Y then Next := drUp
-      else if Points[J + 1].Y < Points[J].Y then Next := drDown
+      if Points[J + 1].Y > Points[J].Y then
+        Next := drUp
+      else if Points[J + 1].Y < Points[J].Y then
+        Next := drDown
       else
         Next := Direction;
       if (Next <> Direction) and (Next <> drNone) then
@@ -445,7 +466,8 @@ var
 
   function XY(const Value: Extended; const Y: Boolean): string;
   begin
-    if Y then Result := FormatFloat(Graph.FloatFormat(Graph.YFormat), Value)
+    if Y then
+      Result := FormatFloat(Graph.FloatFormat(Graph.YFormat), Value)
     else
       Result := FormatFloat(Graph.FloatFormat(Graph.XFormat), Value);
   end;
@@ -468,7 +490,8 @@ var
     Result := '#888888';
     Data := Graph.Formula.Data[Index];
     if not Assigned(Data) then Exit;
-    if ForText then Result := Readable(TColor(Data.Color), Dark)
+    if ForText then
+      Result := Readable(TColor(Data.Color), Dark)
     else
       Result := Web(TColor(Data.Color));
   end;
@@ -728,8 +751,10 @@ begin
   end;
   if Block <> '' then Block := '<div class="rep">' + Block + '</div>';
   Place := Pos('</body>', LowerCase(Result));
-  if Place = 0 then Result := Result + Block
+  if Place = 0 then
+    Result := Result + Block
   else
     Result := Copy(Result, 1, Place - 1) + Block + Copy(Result, Place, MaxInt);
 end;
+
 end.

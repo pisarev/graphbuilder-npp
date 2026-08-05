@@ -132,7 +132,8 @@ var
   Control: TWinControl;
   Message: Integer;
 begin
-  if Code < 0 then Result := CallNextHookEx(Hook, Code, wParam, lParam)
+  if Code < 0 then
+    Result := CallNextHookEx(Hook, Code, wParam, lParam)
   else begin
     Control := Focused(Main);
     if Assigned(Main) and Assigned(Control) and (Code = HC_ACTION) and (lParam and $40000000 = 0) then
@@ -198,7 +199,8 @@ begin
       else
         Message := 0;
       end;
-      if Message = 0 then Result := CallNextHookEx(Hook, Code, wParam, lParam)
+      if Message = 0 then
+        Result := CallNextHookEx(Hook, Code, wParam, lParam)
       else begin
         PostMessage(Npp.Handle, Message, wParam, lParam);
         Result := 1;
@@ -331,7 +333,8 @@ var
 begin
   if not Assigned(Main) then Exit('');
   Producer := TPageProducer(Main.FindComponent('PP'));
-  if Assigned(Producer) then Template := Producer.Content
+  if Assigned(Producer) then
+    Template := Producer.Content
   else
     Template := '<html><head></head><body></body></html>';
   Result := ReportFacts.Extend(Template, Main.Graph, DarkMode);
@@ -339,7 +342,8 @@ end;
 
 function TPlugin.Theme: TThemeKind;
 begin
-  if DarkMode then Result := tkDark
+  if DarkMode then
+    Result := tkDark
   else
     Result := tkLight;
 end;
@@ -453,4 +457,5 @@ end;
 
 initialization
   Npp := TPlugin.Create;
+
 end.

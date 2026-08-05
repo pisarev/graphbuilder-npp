@@ -172,4 +172,5 @@ begin
     Message.Result := DefWindowProc(FHandle, Message.Msg, Message.wParam, Message.lParam);
   end;
 end;
+
 end.

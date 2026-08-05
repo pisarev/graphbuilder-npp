@@ -125,7 +125,10 @@ end;
 
 function Flag(const Value: Boolean): string;
 begin
-  if Value then Result := 'true' else Result := 'false';
+  if Value then
+    Result := 'true'
+  else
+    Result := 'false';
 end;
 
 function Escape(const Text: string): string;
@@ -424,7 +427,8 @@ begin
       FRetry := False;
       FState := Text;
       SaveSession;
-      if Root.Get('cs', '') = 'polar' then FGraph.CS := csPolar
+      if Root.Get('cs', '') = 'polar' then
+        FGraph.CS := csPolar
       else
         FGraph.CS := csRectangular;
       if Root.Find('formulas') is TJSONArray then
@@ -457,8 +461,10 @@ begin
       Exit(BookmarkSlot(Root.Get('slot', 0), Root.Get('mode', 'status')));
     if Cmd = 'copy' then
     begin
-      if Root.Get('text', '') <> '' then Clipboard.AsText := Root.Get('text', '')
-      else if FState <> '' then Clipboard.AsText := FState;
+      if Root.Get('text', '') <> '' then
+        Clipboard.AsText := Root.Get('text', '')
+      else if FState <> '' then
+        Clipboard.AsText := FState;
       Exit;
     end;
     if Cmd = 'paste' then
@@ -523,7 +529,8 @@ begin
       First := False;
       Text.Append('{"i":').Append(I);
       Text.Append(',"color":"').Append(Web(TColor(Data.Color))).Append('"');
-      if FGraph.Formula.Active[I] then Text.Append(',"on":true')
+      if FGraph.Formula.Active[I] then
+        Text.Append(',"on":true')
       else
         Text.Append(',"on":false');
       Text.Append(',"seg":[');
@@ -641,7 +648,10 @@ begin
   Text := TStringBuilder.Create;
   try
     Text.Append('{"type":"trace","polar":');
-    if Polar then Text.Append('true') else Text.Append('false');
+    if Polar then
+      Text.Append('true')
+    else
+      Text.Append('false');
     Text.Append(',"param":').Append(Num(Param)).Append(',"list":[');
     First := True;
     for I := 0 to FGraph.Formula.Count - 1 do
@@ -650,7 +660,8 @@ begin
       if not Assigned(Data) or not FGraph.Formula.Active[I] then Continue;
       if not FGraph.Formula.Tracing[I] then Continue;
       if not Check(FGraph.SA, Data.ScriptIndex) then Continue;
-      if Polar then Point := FGraph.ComputePolar(Param, FGraph.SA[Data.ScriptIndex])
+      if Polar then
+        Point := FGraph.ComputePolar(Param, FGraph.SA[Data.ScriptIndex])
       else
         Point := FGraph.ComputeRectangular(Param, FGraph.SA[Data.ScriptIndex]);
       if IsNan(Point.X) or IsNan(Point.Y) or IsInfinite(Point.Y) then Continue;
@@ -676,7 +687,8 @@ begin
   Text := TStringBuilder.Create;
   try
     Text.Append('{"type":"snapshot"');
-    if FGraph.CS = csPolar then Text.Append(',"cs":"polar"')
+    if FGraph.CS = csPolar then
+      Text.Append(',"cs":"polar"')
     else
       Text.Append(',"cs":"rect"');
     Text.Append(',"formulas":[');
@@ -686,10 +698,12 @@ begin
       if not First then Text.Append(',');
       First := False;
       Text.Append('{"text":"').Append(Escape(FGraph.Formula[I])).Append('"');
-      if FGraph.Formula.Active[I] then Text.Append(',"on":true')
+      if FGraph.Formula.Active[I] then
+        Text.Append(',"on":true')
       else
         Text.Append(',"on":false');
-      if FGraph.Formula.Tracing[I] then Text.Append(',"trace":true')
+      if FGraph.Formula.Tracing[I] then
+        Text.Append(',"trace":true')
       else
         Text.Append(',"trace":false');
       Text.Append('}');
@@ -761,7 +775,8 @@ end;
 
 procedure TLazPanel.SetDecimals(const Value: Integer);
 begin
-  if Value > 0 then FGraph.PrecisionFormat := '0.' + StringOfChar('#', Value)
+  if Value > 0 then
+    FGraph.PrecisionFormat := '0.' + StringOfChar('#', Value)
   else
     FGraph.PrecisionFormat := '0';
 end;
@@ -884,7 +899,7 @@ begin
     if not (Data is TJSONObject) then Exit;
     Root := TJSONObject(Data);
     if not (Root.Find('formulas') is TJSONArray) then Exit;
-    if TJSONArray(Root.Find('formulas')).Count = 0 then Exit;
+    if (TJSONArray(Root.Find('formulas')).Count = 0) and not Root.Get('cleared', False) then Exit;
     ApplyNative(Root);
     Root.Delete('cmd');
     Root.Add('type', 'snapshot');
@@ -905,7 +920,10 @@ begin
     for I := 0 to 9 do
     begin
       if I > 0 then Text.Append(',');
-      if FileExists(SlotFile(I)) then Text.Append('true') else Text.Append('false');
+      if FileExists(SlotFile(I)) then
+        Text.Append('true')
+      else
+        Text.Append('false');
     end;
     Text.Append(']}');
     Result := Text.ToString;
@@ -983,4 +1001,5 @@ end;
 initialization
   Dot := DefaultFormatSettings;
   Dot.DecimalSeparator := '.';
+
 end.

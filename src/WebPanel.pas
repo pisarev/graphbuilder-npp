@@ -447,7 +447,8 @@ end;
 
 procedure TWebPanel.SetDecimals(const Value: Integer);
 begin
-  if Value > 0 then FGraph.PrecisionFormat := '0.' + StringOfChar('#', Value)
+  if Value > 0 then
+    FGraph.PrecisionFormat := '0.' + StringOfChar('#', Value)
   else
     FGraph.PrecisionFormat := '0';
 end;
@@ -459,8 +460,9 @@ procedure TWebPanel.Apply(const Root: TJSONObject);
     Value: TJSONValue;
   begin
     Value := Root.Values[Name];
-    if Assigned(Value) then Result := Value.AsType<Double>
-      else
+    if Assigned(Value) then
+      Result := Value.AsType<Double>
+        else
       Result := Default;
   end;
 
@@ -469,8 +471,9 @@ procedure TWebPanel.Apply(const Root: TJSONObject);
     Value: TJSONValue;
   begin
     Value := Root.Values[Name];
-    if Assigned(Value) then Result := Value.AsType<Boolean>
-      else
+    if Assigned(Value) then
+      Result := Value.AsType<Boolean>
+        else
       Result := Default;
   end;
 
@@ -479,7 +482,8 @@ procedure TWebPanel.Apply(const Root: TJSONObject);
     Value: TJSONValue;
   begin
     Value := Root.Values[Name];
-    if Assigned(Value) then Result := Value.Value
+    if Assigned(Value) then
+      Result := Value.Value
     else
       Result := Default;
   end;
@@ -534,7 +538,8 @@ begin
   Text := TStringBuilder.Create;
   try
     Text.Append('{"type":"snapshot"');
-    if FGraph.CS = csPolar then Text.Append(',"cs":"polar"')
+    if FGraph.CS = csPolar then
+      Text.Append(',"cs":"polar"')
     else
       Text.Append(',"cs":"rect"');
     Text.Append(',"formulas":[');
@@ -590,7 +595,8 @@ end;
 
 function TWebPanel.BookmarkSlot(const Slot: Integer; const Mode: string): string;
 begin
-  if Assigned(FOnBookmark) then Result := FOnBookmark(Slot, Mode)
+  if Assigned(FOnBookmark) then
+    Result := FOnBookmark(Slot, Mode)
   else
     Result := Bookmarks;
 end;
@@ -627,7 +633,8 @@ var
   Html: string;
   Root: TJSONObject;
 begin
-  if Assigned(FOnReport) then Html := FOnReport
+  if Assigned(FOnReport) then
+    Html := FOnReport
   else
     Html := ReportFacts.Extend('<html><head></head><body></body></html>', FGraph, FKind = tkDark);
   Root := TJSONObject.Create;
@@ -724,4 +731,5 @@ begin
     Root.Free;
   end;
 end;
+
 end.

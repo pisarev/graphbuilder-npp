@@ -33,7 +33,10 @@ implementation
 procedure StartCommand; cdecl;
 begin
   LogStep('menu: command received');
-  if Assigned(Npp) then Npp.Start else LogStep('menu: Npp was not created');
+  if Assigned(Npp) then
+    Npp.Start
+  else
+    LogStep('menu: Npp was not created');
 end;
 
 constructor TLazPlugin.Create;
@@ -97,4 +100,5 @@ end;
 
 initialization
   Npp := TLazPlugin.Create;
+
 end.

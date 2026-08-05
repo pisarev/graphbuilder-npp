@@ -14,8 +14,7 @@ uses
   {$IFDEF FPC}
   Windows, Messages, LMessages, Classes, SysUtils, Controls, Forms,
   {$ELSE}
-  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils,
-  Vcl.Controls, Vcl.Forms,
+  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls, Vcl.Forms,
   {$ENDIF}
   NotepadPP.Plugin;
 
@@ -88,4 +87,5 @@ begin
   if not Assigned(Child) then Exit(False);
   Result := Child.Perform(CN_BASE + Message.Msg, Message.WParam, Message.LParam) <> 0;
 end;
+
 end.

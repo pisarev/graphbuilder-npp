@@ -107,7 +107,8 @@ function ThemeColors(const Kind: TThemeKind): TThemeColors;
 var
   Tones: TThemeTones;
 begin
-  if Kind = tkDark then Tones := DarkTones
+  if Kind = tkDark then
+    Tones := DarkTones
   else
     Tones := LightTones;
   Result.Window := Tone(Tones.Window);
@@ -136,7 +137,8 @@ var
 begin
   SetLength(Result, Length(LightCurves));
   for I := Low(Result) to High(Result) do
-    if Kind = tkDark then Result[I] := Tone(DarkCurves[I])
+    if Kind = tkDark then
+      Result[I] := Tone(DarkCurves[I])
     else
       Result[I] := Tone(LightCurves[I]);
 end;
@@ -230,7 +232,8 @@ begin
     WM_ERASEBKGND: Message.Result := 1;
     WM_PRINTCLIENT: Paint(HDC(Message.WParam));
     WM_PAINT:
-      if Message.WParam <> 0 then Paint(HDC(Message.WParam))
+      if Message.WParam <> 0 then
+        Paint(HDC(Message.WParam))
       else begin
         DC := BeginPaint(FBox.Handle, Info);
         try
@@ -264,7 +267,8 @@ begin
   TFont(Font).Name := ThemeFont;
   TFont(Font).Size := ThemeFontSize;
   TFont(Font).Color := Color;
-  if Bold then TFont(Font).Style := [fsBold]
+  if Bold then
+    TFont(Font).Style := [fsBold]
   else
     TFont(Font).Style := [];
 end;
@@ -479,4 +483,5 @@ begin
   FitBars(Bars);
   Form.Invalidate;
 end;
+
 end.

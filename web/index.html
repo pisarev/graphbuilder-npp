@@ -595,10 +595,58 @@ function keepTheme(value) {
 const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
 const palette = ["--c1", "--c2", "--c3", "--c4", "--c5"];
 
-const curves = [
-  { text: "Sin(X)", on: true, trace: true, color: null },
-  { text: "Cos(X) / 2", on: true, trace: true, color: null }
-];
+const curves = [];
+
+// The built-in example: the sheet a system starts with until it has its own.
+function freshSheet() {
+  return [
+    { text: "Sin(X)", on: true, trace: true, color: null },
+    { text: "Cos(X) / 2", on: true, trace: true, color: null }
+  ];
+}
+freshSheet().forEach(c => curves.push(c));
+
+/*
+  Each coordinate system keeps a sheet of its own, the way the classic window
+  does: switching saves the current system's state under its name and loads
+  the other one's own, and on the first run every system gets its own initial
+  state. While one list was shared, formulas typed in cartesian surfaced in
+  polar.
+
+  The shelf holds the sheet of the OTHER system; the current one lives in
+  curves. An empty shelf entry means "never opened" - such a system starts
+  with the built-in example. The "emptied by the user" mark travels with the
+  sheet: one system's emptiness must not become the other's.
+*/
+const shelf = { rect: null, polar: null };
+
+function currentCS() {
+  return el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
+}
+
+// The current sheet goes to the shelf, the new one comes off it (or the example).
+function switchSheet(from, to) {
+  shelf[from] = {
+    formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace })),
+    cleared: emptiedByUser && curves.length === 0
+  };
+  const next = shelf[to];
+  curves.length = 0;
+  if (next && Array.isArray(next.formulas) && (next.formulas.length || next.cleared)) {
+    next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null }));
+    emptiedByUser = next.cleared && curves.length === 0;
+  } else {
+    freshSheet().forEach(c => curves.push(c));
+    emptiedByUser = false;
+  }
+  if (!curves.length) {
+    data.seg = [];
+    data.overlaps = [];
+    data.extremes = { max: [], min: [] };
+    data.trace = null;
+  }
+  drawPanel();
+}
 
 /*
   Emptiness comes in two kinds, and they have to be told apart.
@@ -749,6 +797,21 @@ function applySnapshot(m) {
   curves.length = 0;
   (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null }));
   emptiedByUser = curves.length === 0;
+  /*
+    The other system's shelf comes from the snapshot when it carries one. An
+    old snapshot without shelves leaves the neighbour "never opened", and it
+    starts with the built-in example - exactly like a first run.
+  */
+  {
+    const cur = m.cs || el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
+    const other = cur === "rect" ? "polar" : "rect";
+    const brought = m.sheets && m.sheets[other];
+    shelf[other] = (brought && Array.isArray(brought.formulas))
+      ? { formulas: brought.formulas.map(f => ({ text: f.text, on: f.on, trace: f.trace })),
+          cleared: !!brought.cleared }
+      : null;
+    shelf[cur] = null;
+  }
   if (emptiedByUser) {
     data.seg = [];
     data.overlaps = [];
@@ -1107,6 +1170,21 @@ function state() {
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
       color: opt.multicolor ? tone(i) : css(opt.penColor) })),
     cleared: emptiedByUser && curves.length === 0,
+    /*
+      Both shelves ride in the state: the sheet of the system the person is
+      not looking at has to survive a reload just like the one on screen.
+    */
+    sheets: (() => {
+      const cur = el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
+      const out = {};
+      out[cur] = {
+        formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace })),
+        cleared: emptiedByUser && curves.length === 0
+      };
+      const other = cur === "rect" ? "polar" : "rect";
+      if (shelf[other]) out[other] = shelf[other];
+      return out;
+    })(),
     options: options()
   };
 }
@@ -1592,7 +1670,9 @@ el("tools").addEventListener("click", e => {
 el("cs").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
+  const from = currentCS();
   [...el("cs").children].forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  if (b.dataset.cs !== from) switchSheet(from, b.dataset.cs);
   build();
 });
 

@@ -111,7 +111,8 @@ end;
 
 function TNppPlugin.GetFuncItem(const Index: Integer): PFuncItem;
 begin
-  if (Index < 0) or (Index > High(FFuncItems)) then Result := nil
+  if (Index < 0) or (Index > High(FFuncItems)) then
+    Result := nil
   else
     Result := @FFuncItems[Index];
 end;
@@ -218,7 +219,8 @@ var
 begin
   Index := 0;
   SendMessage(FNppData.NppHandle, NPPM_GETCURRENTSCINTILLA, 0, LPARAM(@Index));
-  if Index = 0 then Result := FNppData.ScintillaMainHandle
+  if Index = 0 then
+    Result := FNppData.ScintillaMainHandle
   else
     Result := FNppData.ScintillaSecondHandle;
 end;
@@ -283,4 +285,5 @@ procedure TNppPlugin.UnregisterModeless(const Window: HWND);
 begin
   SendNpp(NPPM_MODELESSDIALOG, MODELESSDIALOGREMOVE, LPARAM(Window));
 end;
+
 end.

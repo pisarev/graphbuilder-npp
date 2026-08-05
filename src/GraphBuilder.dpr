@@ -9,9 +9,7 @@
 library GraphBuilder;
 
 uses
-  Winapi.Windows,
-  NotepadPP.Types,
-  Plugin in 'Plugin.pas',
+  Winapi.Windows, NotepadPP.Types, Plugin in 'Plugin.pas',
   MainForm in 'MainForm.pas' {Main};
 
 {$R *.res}
