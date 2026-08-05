@@ -14,12 +14,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Math, Controls, Forms, ExtCtrls, Graphics,
-  Clipbrd, Dialogs, base64, fpjson, jsonparser,
-  uWVBrowser, uWVWinControl, uWVWindowParent, uWVTypes,
-  uWVTypeLibrary, uWVBrowserBase, uWVLoader, uWVCoreWebView2Args,
-  NotepadPP.Plugin, NotepadPP.Docking, uLazTrace,
-  CrossVision.Geometry.Types, CrossGraph.Types, CrossGraph.Engine, CrossGraph,
-  ReportFacts;
+  Clipbrd, Dialogs, base64, fpjson, jsonparser, uWVBrowser, uWVWinControl, uWVWindowParent,
+  uWVTypes, uWVTypeLibrary, uWVBrowserBase, uWVLoader, uWVCoreWebView2Args, NotepadPP.Plugin,
+  NotepadPP.Docking, uLazTrace, CrossVision.Geometry.Types, CrossGraph.Types, CrossGraph.Engine,
+  CrossGraph, ReportFacts;
 
 type
   TLazPanel = class(TNppDockingForm)
@@ -37,7 +35,6 @@ type
     FPoints: Integer;
     FRetry: Boolean;
     FInside: Boolean;
-
     FKeepRatio: Boolean;
     FPenColor: string;
     function Decimals: Integer;
@@ -76,7 +73,6 @@ type
     procedure WMSize(var aMessage: TWMSize); message WM_SIZE;
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
-
     procedure SetTheme(const Dark: Boolean);
   end;
 
@@ -114,9 +110,7 @@ end;
 const
   MaxSegmentPoints = 6000;
   DoneCheck = 40;
-
   BusyReply = '{"type":"busy"}';
-
   DefaultKeepRatio = True;
   DefaultPenColor = '--c1';
 
@@ -164,40 +158,31 @@ begin
   Width := 900;
   Height := 600;
   OnShow := Shown;
-
   FKeepRatio := DefaultKeepRatio;
   FPenColor := DefaultPenColor;
-
   FGraph := TGraph.Create(Self);
   FGraph.Parent := Self;
   FGraph.SetBounds(0, 0, ClientWidth, ClientHeight);
-
   FGraph.HandleNeeded;
   FGraph.Silent := True;
   FGraph.OnOverlap := GraphOverlap;
   FGraph.OnExtreme := GraphExtreme;
-
   FHost := TWVWindowParent.Create(Self);
   FHost.Parent := Self;
   FHost.Align := alClient;
-
   FBrowser := TWVBrowser.Create(Self);
   FBrowser.OnAfterCreated := Created;
   FBrowser.OnWebMessageReceived := Incoming;
   FBrowser.OnInitializationError := Failed;
-
   FHost.Browser := FBrowser;
-
   FWait := TTimer.Create(Self);
   FWait.Enabled := False;
   FWait.Interval := 200;
   FWait.OnTimer := Poll;
-
   FDone := TTimer.Create(Self);
   FDone.Enabled := False;
   FDone.Interval := DoneCheck;
   FDone.OnTimer := Tick;
-
   FDark := Assigned(NppParent) and NppParent.DarkMode;
   FPage := UiFile;
 end;
@@ -289,7 +274,6 @@ var
 begin
   Args := TCoreWebView2WebMessageReceivedEventArgs.Create(aArgs);
   try
-
     try
       Reply := Command(Args.WebMessageAsString);
     except
@@ -323,7 +307,6 @@ end;
 
 procedure TLazPanel.Rebuild;
 begin
-
   if FInside then
   begin
     LogStep('build re-entered, skipping');
@@ -333,7 +316,6 @@ begin
   try
   FStart := GetTickCount;
   FGraph.Build;
-
   Answer(Curves);
   FDone.Enabled := True;
   finally
@@ -348,7 +330,6 @@ begin
   if FInside or FGraph.Busy then Exit;
   FDone.Enabled := False;
   Ready := Curves;
-
   if (FPoints = 0) and (FGraph.Formula.ActiveCount > 0) and not FRetry then
   begin
     FRetry := True;
@@ -378,7 +359,6 @@ procedure TLazPanel.Apply(const Options: TJSONObject);
 begin
   FGraph.MaxX := Num_('maxX', FGraph.MaxX);
   FGraph.MaxY := Num_('maxY', FGraph.MaxY);
-
   FGraph.Offset := PointD(-Num_('centerX', -FGraph.Offset.X), -Num_('centerY', -FGraph.Offset.Y));
   FGraph.ShowGrid := Flag('grid', FGraph.ShowGrid);
   FGraph.ShowAxis := Flag('axis', FGraph.ShowAxis);
@@ -394,7 +374,6 @@ begin
   FGraph.Accuracy := Round(Num_('accuracy', FGraph.Accuracy));
   FGraph.HSpacing := Num_('hSpacing', FGraph.HSpacing);
   FGraph.VSpacing := Num_('vSpacing', FGraph.VSpacing);
-
   FGraph.PolarMaxAngle := DegToRad(Num_('polarAngle', RadToDeg(FGraph.PolarMaxAngle)));
   FGraph.OverlapMaxTime := Round(Num_('overlapTime', FGraph.OverlapMaxTime));
   FGraph.OverlapMaxDepth := Round(Num_('overlapDepth', FGraph.OverlapMaxDepth));
@@ -402,14 +381,10 @@ begin
   FGraph.GraphPen.Width := Round(Num_('penWidth', FGraph.GraphPen.Width));
   FGraph.ZoomInFactor := Num_('zoomIn', FGraph.ZoomInFactor);
   FGraph.ZoomOutFactor := Num_('zoomOut', FGraph.ZoomOutFactor);
-
   FGraph.MarkSpacing := Round(Num_('markSpacing', FGraph.MarkSpacing));
-
   SetDecimals(Round(Num_('decimals', Decimals)));
-
   FKeepRatio := Flag('keepRatio', FKeepRatio);
   FPenColor := Str('penColor', FPenColor);
-
   FGraph.SignLayout := TLayoutType(EnsureRange(Round(Num_('signLayout', Ord(FGraph.SignLayout))), 0, 3));
   FGraph.SignMargin := Round(Num_('signMargin', FGraph.SignMargin));
   FGraph.SignBlendValue := EnsureRange(Round(Num_('signBlend', FGraph.SignBlendValue)), 0, 255);
@@ -436,24 +411,19 @@ begin
     Root := TJSONObject(Data);
     Cmd := Root.Get('cmd', '');
     LogStep('command from the page: ' + Cmd);
-
     if Cmd = 'size' then
     begin
-
       W := Root.Get('w', FGraph.Width);
       H := Root.Get('h', FGraph.Height);
       LogStep(Format('size from the page: %dx%d (was %dx%d)', [W, H, FGraph.Width, FGraph.Height]));
       if (W > 0) and (H > 0) then FGraph.SetBounds(0, 0, W, H);
       Exit;
     end;
-
     if Cmd = 'build' then
     begin
       FRetry := False;
-
       FState := Text;
       SaveSession;
-
       if Root.Get('cs', '') = 'polar' then FGraph.CS := csPolar
       else
         FGraph.CS := csRectangular;
@@ -474,7 +444,6 @@ begin
       Rebuild;
       Exit(BusyReply);
     end;
-
     if Cmd = 'options' then
     begin
       FRetry := False;
@@ -482,22 +451,18 @@ begin
       Rebuild;
       Exit(BusyReply);
     end;
-
     if Cmd = 'signfont' then Exit(SignFont);
-
     if Cmd = 'trace' then Exit(Trace(Root.Get('param', Double(0))));
     if Cmd = 'bookmark' then
       Exit(BookmarkSlot(Root.Get('slot', 0), Root.Get('mode', 'status')));
     if Cmd = 'copy' then
     begin
-
       if Root.Get('text', '') <> '' then Clipboard.AsText := Root.Get('text', '')
       else if FState <> '' then Clipboard.AsText := FState;
       Exit;
     end;
     if Cmd = 'paste' then
     begin
-
       if ShareState(Clipboard.AsText) <> '' then
         LoadState(ShareState(Clipboard.AsText))
       else
@@ -507,7 +472,6 @@ begin
     if Cmd = 'report' then Exit(ReportPage);
     if Cmd = 'ready' then
     begin
-
       if LoadSession then Exit('');
       Exit('{"type":"hello","engine":"crossgraph-fpc"}');
     end;
@@ -571,11 +535,9 @@ begin
             if not FirstPart then Text.Append(',');
             FirstPart := False;
             Text.Append('[');
-
             Seg := M - L + 1;
             Stride := (Seg + MaxSegmentPoints - 1) div MaxSegmentPoints;
             if Stride < 1 then Stride := 1;
-
             Prev := Default(TPoint);
             HasPix := False;
             Emit := False;
@@ -732,7 +694,6 @@ begin
         Text.Append(',"trace":false');
       Text.Append('}');
     end;
-
     Text.Append('],"options":{');
     Text.Append('"maxX":').Append(Num(FGraph.MaxX));
     Text.Append(',"maxY":').Append(Num(FGraph.MaxY));
@@ -873,7 +834,6 @@ var
   List: TStringList;
 begin
   if FState = '' then Exit;
-
   if Pos('"formulas":[]', FState) > 0 then Exit;
   List := TStringList.Create;
   try
@@ -881,7 +841,6 @@ begin
     try
       List.SaveToFile(SessionFile);
     except
-
       on E: Exception do LogStep('the session was not saved: ' + E.Message);
     end;
   finally
@@ -924,12 +883,9 @@ begin
     end;
     if not (Data is TJSONObject) then Exit;
     Root := TJSONObject(Data);
-
     if not (Root.Find('formulas') is TJSONArray) then Exit;
     if TJSONArray(Root.Find('formulas')).Count = 0 then Exit;
-
     ApplyNative(Root);
-
     Root.Delete('cmd');
     Root.Add('type', 'snapshot');
     Answer(Root.AsJSON);
@@ -1005,7 +961,6 @@ begin
     finally
       List.Free;
     end;
-
     DeleteFile(SlotFile(Slot));
     Result := Bookmarks;
   end;

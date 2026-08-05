@@ -14,8 +14,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, System.TypInfo,
-  System.Math,
-  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Grids, Vcl.ComCtrls,
+  System.Math, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.Grids, Vcl.ComCtrls,
   Vcl.ExtCtrls, Vcl.ImgList, CrossGraph, CrossGraph.Types;
 
 const
@@ -70,15 +69,12 @@ const
     Window: $F1F2F5; Panel: $F8F9FB; Surface: $FFFFFF; Border: $DCE0E6;
     Text: $23282E; Muted: $69707C; Icon: $424A55; Accent: $2F6FEB;
     Grid: $E8EBF0; Axis: $8C949F);
-
   DarkTones: TThemeTones = (
     Window: $181A1D; Panel: $202327; Surface: $141618; Border: $32363C;
     Text: $E0E4EA; Muted: $858D99; Icon: $C0C6CE; Accent: $4F93F0;
     Grid: $282C31; Axis: $747C87);
-
   LightCurves: array[0..9] of TTone = ($2F6FEB, $D6453C, $12A594, $C2701C,
     $8E4EC6, $D6409F, $3A8C3A, $0891B2, $9A6B00, $475569);
-
   DarkCurves: array[0..9] of TTone = ($6BA6FF, $FF8A80, $4FD1C5, $F0A868,
     $C79BF0, $F587C8, $86D986, $5FD0E8, $E8C46B, $A8B4C4);
 
@@ -483,5 +479,4 @@ begin
   FitBars(Bars);
   Form.Invalidate;
 end;
-
 end.

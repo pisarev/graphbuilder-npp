@@ -13,8 +13,8 @@ unit Glyphs;
 interface
 
 uses
-  Winapi.Windows, System.Classes, System.SysUtils, System.Types, System.Math,
-  Winapi.CommCtrl, Vcl.Graphics, Vcl.ImgList, CrossGraph.Types, DarkTheme;
+  Winapi.Windows, System.Classes, System.SysUtils, System.Types, System.Math, Winapi.CommCtrl,
+  Vcl.Graphics, Vcl.ImgList, CrossGraph.Types, DarkTheme;
 
 const
   GlyphCount = 24;
@@ -540,5 +540,4 @@ begin
   end;
   Images.Handle := List;
 end;
-
 end.

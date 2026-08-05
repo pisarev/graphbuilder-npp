@@ -43,37 +43,27 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
     function AddFuncItem(const Caption: string; const Func: TPluginCommand): Integer; overload;
     function AddFuncItem(const Caption: string; const Func: TPluginCommand;
       const ShortcutKey: TShortcutKey): Integer; overload;
     function AddSeparator: Integer;
-
     function CommandCount: Integer;
-
     function SingleCommandId: Integer;
-
     procedure SetInfo(const Value: TNppData); virtual;
     procedure BeNotified(Notification: PSciNotification); virtual;
     function MessageProc(const Message: Cardinal; const WParam: WPARAM;
       const LParam: LPARAM): LRESULT; virtual;
-
     function CurrentScintilla: HWND;
     function SendEditor(const Message: Cardinal; const WParam: WPARAM = 0; const LParam: LPARAM = 0): LRESULT;
     function SendNpp(const Message: Cardinal; const WParam: WPARAM = 0; const LParam: LPARAM = 0): LRESULT;
-
     function SelectedText: string;
     procedure ReplaceSelection(const Value: string);
-
     function ConfigDir: string;
     function DarkMode: Boolean;
-
     procedure RegisterModeless(const Window: HWND);
     procedure UnregisterModeless(const Window: HWND);
-
     property NppData: TNppData read FNppData;
     function NameForNpp: PWideChar;
-
     property PluginName: string read FPluginName write FPluginName;
     property ModuleName: string read FModuleName;
     property FuncCount: Integer read GetFuncCount;
@@ -293,5 +283,4 @@ procedure TNppPlugin.UnregisterModeless(const Window: HWND);
 begin
   SendNpp(NPPM_MODELESSDIALOG, MODELESSDIALOGREMOVE, LPARAM(Window));
 end;
-
 end.

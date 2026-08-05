@@ -600,6 +600,22 @@ const curves = [
   { text: "Cos(X) / 2", on: true, trace: true, color: null }
 ];
 
+/*
+  Emptiness comes in two kinds, and they have to be told apart.
+
+  A snapshot with no formulas is NOT applied - that is a guard, not a quibble:
+  on 30.07 a session written in the plotting plugin during a minute when there
+  were no formulas overwrote the work at the next start, and the emptiness then
+  reproduced itself on every run after that.
+
+  But somebody who deleted every formula THEMSELVES expects the exact opposite:
+  to come back to a blank sheet, not to the built-in example. One rule does not
+  cover both requests, so emptiness is marked: deleted by hand is marked, and
+  happened by itself is not.
+*/
+let emptiedByUser = false;
+
+
 const data = { seg: [], overlaps: [], extremes: { max: [], min: [] }, trace: null };
 
 let lastShown = "";
@@ -703,7 +719,19 @@ function answer(m) {
 
 function applySnapshot(m) {
   
-  if (!Array.isArray(m.formulas) || m.formulas.length === 0) return;
+  if (!Array.isArray(m.formulas)) return;
+  /*
+    An empty list is applied only when it carries the mark, which the page sets
+    when the person deleted the formulas. Without the mark emptiness is an
+    accident, and applying it means erasing somebody's work.
+
+    The refusal stands HERE and nowhere else: past this line the snapshot is
+    applied as usual. The first attempt returned from the whole procedure, and
+    somebody who emptied the sheet in polar coordinates came back to a blank one
+    in cartesian with default settings - everything was lost except the
+    emptiness itself.
+  */
+  if (m.formulas.length === 0 && !m.cleared) return;
   const o = m.options || {};
   if (m.cs) [...el("cs").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cs === m.cs)));
   if ("maxX" in o) view.w = o.maxX;
@@ -720,6 +748,13 @@ function applySnapshot(m) {
   });
   curves.length = 0;
   (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null }));
+  emptiedByUser = curves.length === 0;
+  if (emptiedByUser) {
+    data.seg = [];
+    data.overlaps = [];
+    data.extremes = { max: [], min: [] };
+    data.trace = null;
+  }
   syncControls();
   drawPanel();
   build();
@@ -1071,6 +1106,7 @@ function state() {
     */
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
       color: opt.multicolor ? tone(i) : css(opt.penColor) })),
+    cleared: emptiedByUser && curves.length === 0,
     options: options()
   };
 }
@@ -1136,7 +1172,12 @@ function drawPanel() {
     const [trace, eye, kill] = row.querySelectorAll(".pf-btn");
     trace.onclick = () => { c.trace = !c.trace; drawPanel(); build(); };
     eye.onclick = () => { c.on = !c.on; drawPanel(); build(); };
-    kill.onclick = () => { curves.splice(i, 1); drawPanel(); build(); };
+    kill.onclick = () => {
+      curves.splice(i, 1);
+      if (!curves.length) emptiedByUser = true;
+      drawPanel();
+      build();
+    };
     box.appendChild(row);
   });
   paintTraceValues();
@@ -1637,6 +1678,7 @@ el("closeDrawer").onclick = () => el("drawer").classList.remove("open");
 function commitField() {
   const t = el("formula").value.trim();
   if (t && !curves.some(c => c.text === t)) {
+    emptiedByUser = false;
     curves.push({ text: t, on: true, trace: true, color: null });
     histAdd(t);
     drawPanel();
@@ -1648,6 +1690,7 @@ el("refresh").onclick = build;
 el("clearBtn").onclick = () => {
   if (!curves.length) return;
   curves.length = 0;
+  emptiedByUser = true;
   el("formula").value = "";
   data.seg = [];
   data.overlaps = [];
@@ -1765,6 +1808,7 @@ el("formula").addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   const text = e.target.value.trim();
   if (!text) return;
+  emptiedByUser = false;
   curves.push({ text, on: true, trace: true, color: null });
   histAdd(text);
   e.target.select();

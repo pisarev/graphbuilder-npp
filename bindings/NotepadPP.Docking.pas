@@ -45,19 +45,14 @@ type
     constructor Create(NppParent: TNppPlugin); overload; override;
     constructor Create(AOwner: TNppForm); overload; override;
     procedure AfterConstruction; override;
-
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); reintroduce; overload; virtual;
     constructor Create(AOwner: TNppForm; DlgId: Integer); reintroduce; overload; virtual;
-
     procedure RegisterDockingForm(const MaskStyle: Cardinal = DWS_DF_CONT_LEFT);
     procedure UpdateDisplayInfo; overload;
     procedure UpdateDisplayInfo(const Info: string); overload;
-
     procedure Show;
     procedure Hide;
-
     property DlgId: Integer read FDlgId;
-
     property CmdId: Integer read FCmdId write FCmdId;
   end;
 
@@ -279,5 +274,4 @@ initialization
 
 finalization
   ClearTextList;
-
 end.

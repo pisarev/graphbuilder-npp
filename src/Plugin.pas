@@ -13,10 +13,8 @@ unit Plugin;
 interface
 
 uses
-  Windows, Messages, Classes, SysUtils,
-  NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Scintilla,
-  Parser, ParseTypes, Thread,
-  DarkTheme, WebPanel;
+  Windows, Messages, Classes, SysUtils, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Scintilla,
+  Parser, ParseTypes, Thread, DarkTheme, WebPanel;
 
 type
   TSearchThread = class;
@@ -86,11 +84,10 @@ procedure Start; cdecl;
 implementation
 
 uses
-  Controls, Vcl.ActnList, HTTPProd, ReportFacts, GDIPOBJ, GDIPAPI, MainForm, FastList, ParseUtils, StdCtrls, TextConsts,
-  Types;
+  Controls, Vcl.ActnList, HTTPProd, ReportFacts, GDIPOBJ, GDIPAPI, MainForm, FastList,
+  ParseUtils, StdCtrls, TextConsts, Types;
 
 type
-
   TMainAccess = class(TMain);
 
 var
@@ -244,7 +241,6 @@ begin
     SCN_CHARADDED, SCN_UPDATEUI, SCN_MODIFIED:
       if Assigned(Main) and Assigned(Main.Graph) then
       begin
-
         GetCursorPos(Point);
         ScreenToClient(NppData.ScintillaMainHandle, Point);
         I := SendMessage(NppData.ScintillaMainHandle, SCI_POSITIONFROMPOINTCLOSE, Point.X, Point.Y);
@@ -314,14 +310,11 @@ begin
   if not Assigned(Main) then
   begin
     Main := TMain.Create(Self, 1);
-
     FWeb := nil;
   end;
   Main.ApplyEditorTheme;
   Main.Show;
-
   Main.Suggest(SelectedText);
-
   if not Assigned(FWeb) then
   begin
     FWeb := TWebPanel.Create(Main, Main.Graph);
@@ -365,7 +358,6 @@ begin
   Cell := TCustomAction(Component);
   if Mode = 'save' then
   begin
-
     TMainAccess(Main).PageKeepRatio := FWeb.KeepRatio;
     TMainAccess(Main).PagePenColor := FWeb.PenColor;
     TMainAccess(Main).SaveState(Name, False);
@@ -373,11 +365,9 @@ begin
   end
   else if (Mode = 'load') and Cell.Checked then
   begin
-
     if TMainAccess(Main).LoadState(Name) then
     begin
       TMainAccess(Main).Open;
-
       FWeb.KeepRatio := TMainAccess(Main).PageKeepRatio;
       FWeb.PenColor := TMainAccess(Main).PagePenColor;
       FWeb.RefreshFromGraph;

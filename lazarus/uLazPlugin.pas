@@ -12,9 +12,7 @@ unit uLazPlugin;
 interface
 
 uses
-  SysUtils, Classes,
-  uWVLoader,
-  NotepadPP.Types, NotepadPP.Plugin, uLazTrace, uLazPanel;
+  SysUtils, Classes, uWVLoader, NotepadPP.Types, NotepadPP.Plugin, uLazTrace, uLazPanel;
 
 type
   TLazPlugin = class(TNppPlugin)
@@ -99,5 +97,4 @@ end;
 
 initialization
   Npp := TLazPlugin.Create;
-
 end.

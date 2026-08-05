@@ -14,12 +14,10 @@ unit MainForm;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, IniFiles, Graphics, Controls, Forms,
-  Dialogs, ActnList, ActnMan, StdCtrls, Buttons,
-  Grids, ExtCtrls, ComCtrls, Contnrs, HTTPProd, SHDocVw, XPStyleActnCtrls,
-  NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms, NotepadPP.Docking,
-  BlobManager, FastList,
-  CrossGraph.Types, CrossGraph.Engine, CrossGraph;
+  Windows, Messages, SysUtils, Classes, IniFiles, Graphics, Controls, Forms, Dialogs,
+  ActnList, ActnMan, StdCtrls, Buttons, Grids, ExtCtrls, ComCtrls, Contnrs, HTTPProd,
+  SHDocVw, XPStyleActnCtrls, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms,
+  NotepadPP.Docking, BlobManager, FastList, CrossGraph.Types, CrossGraph.Engine, CrossGraph;
 
 const
   FormulaSGCode = MaxWord;
@@ -31,7 +29,6 @@ const
   DColumn = 3;
   EColumn = 4;
   ObjectColumn = CColumn;
-
   WM_REMOVE = WM_USER + 1;
 
 type
@@ -289,16 +286,13 @@ type
     property FileName: string read GetFileName;
     property UserPath: string read GetUserPath;
     property Manager: TBlobManager read FManager write FManager;
-
     property PageKeepRatio: Boolean read FPageKeepRatio write FPageKeepRatio;
     property PagePenColor: string read FPagePenColor write FPagePenColor;
     property ReportLoaded: Boolean read FReportLoaded write FReportLoaded;
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     constructor Create(AOwner: TNppForm; DlgId: Integer); override;
-
     procedure ApplyEditorTheme; virtual;
-
     procedure Suggest(const Formula: string); virtual;
     procedure Next(const Control: TWinControl; const Forward: Boolean); virtual;
     procedure CellEvent(const Data: PCellData; const EventType: TEventType); virtual;
@@ -319,11 +313,8 @@ type
 const
   FileExt = '.ini';
   ReportFileName = 'report.html';
-
   PointsExt = '.csv';
-
   GraphName = 'Graph';
-
   DateTag = 'date';
   HighPrecisionTag = 'highprecision';
   DecimalPlacesTag = 'decimalplaces';
@@ -336,7 +327,6 @@ const
   ExtremeTag = 'extreme';
   VaryRadiusTag = 'varyradius';
   VoidRadiusTag = 'voidradius';
-
   PanelSection = 'Panel';
   LBoxSection = 'LBox';
   CSSection = 'CS';
@@ -350,7 +340,6 @@ const
   ZoomSection = 'Zoom';
   FormulaSection = 'Formula';
   FLSection = 'FormulaList';
-
   LIdent = 'L';
   BIdent = 'B';
   PositionIdent = 'Position';
@@ -388,7 +377,6 @@ const
   OverlapMaxDepthIdent = 'OverlapMaxDepth';
   OverlapMaxTimeIdent = 'OverlapMaxTime';
   MarkSpacingIdent = 'MarkSpacing';
-
   PageSection = 'Page';
   KeepRatioIdent = 'KeepRatio';
   PenColorIdent = 'PenColor';
@@ -396,11 +384,9 @@ const
   MaxIdent = 'Max';
   InFactorIdent = 'InFactor';
   OutFactorIdent = 'OutFactor';
-
   FormulaVisible = 'Visible';
   FormulaCorrect = 'Correct';
   FormulaTracing = 'Tracing';
-
   ClipboardError = 'The clipboard does not contain any valid data';
 
 var
@@ -410,9 +396,8 @@ implementation
 
 uses
   ClipboardMonitor, DarkTheme, ReportFacts, Math, TypInfo, Types, CalcUtils, CrossGraph.Geometry,
-  CrossVision.Geometry.Types, MemoryUtils,
-  Parser, ParseTypes, StrUtils, TextBuilder, TextConsts, TextUtils, ValueTypes,
-  ValueUtils, ZUtils, NumberUtils;
+  CrossVision.Geometry.Types, MemoryUtils, Parser, ParseTypes, StrUtils, TextBuilder,
+  TextConsts, TextUtils, ValueTypes, ValueUtils, ZUtils, NumberUtils;
 
 {$R *.dfm}
 
@@ -433,7 +418,6 @@ var
   S, Value: string;
 begin
   inherited;
-
   if not PtInRect(ClientRect, ScreenToClient(SmallPointToPoint(Message.Pos))) then Exit;
   if Message.WheelDelta > 0 then
     S := Format(Trim(FIncrementValue), [Text])
@@ -726,7 +710,6 @@ begin
         Canvas.Font.Color := Colors.Muted;
         DrawText(Canvas.Handle, PChar(S), Length(S), Rect, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
       end;
-
       Canvas.Brush.Color := Colors.Border;
       Canvas.FillRect(TRect.Create(Rect.Left, Rect.Bottom - 1, Rect.Right, Rect.Bottom));
       Canvas.FillRect(TRect.Create(Rect.Right - 1, Rect.Top, Rect.Right, Rect.Bottom));
@@ -967,7 +950,6 @@ begin
       finally
         EndUpdate;
       end;
-
       if not FGraph.Silent then FGraph.Build;
       gFormula.ResizeColumn;
       gFormula.Invalidate;
@@ -1166,7 +1148,6 @@ end;
 
 procedure TMain.LoadFormulaList;
 const
-
   Examples: array[0..9] of string = ('Sin(X)', 'X * X - 2', '1 / X',
     'Sin(X) / X', 'Exp(- X * X)', 'Abs(X) - 1', 'X * Sin(1 / X)',
     'Sqrt(Abs(X))', 'Ln(Abs(X))', 'Tan(X)');
@@ -1189,7 +1170,6 @@ begin
   else
     Kind := tkLight;
   DarkTheme.ApplyTheme(Self, FGraph, Kind);
-
   if Assigned(FGraph) and (FGraph.Formula.Count > 0) then FGraph.Build;
 end;
 
@@ -1200,7 +1180,6 @@ var
   Text: string;
 begin
   Text := Trim(Formula);
-
   if (Text = '') or (Length(Text) > LengthLimit) or (Pos(#10, Text) > 0) or (Pos(#13, Text) > 0) then
     Exit;
   bFormula.Text := Text;
@@ -1304,7 +1283,6 @@ begin
   if Assigned(FGraph) and FGraph.Showing and PtInRect(FGraph.ClientRect, FGraph.ScreenToClient(Point)) then
   begin
     FGraph.Perform(CM_MOUSEWHEEL, Message.WParam, Message.LParam);
-
     Message.Result := 1;
   end
   else
@@ -2213,7 +2191,6 @@ end;
 
 procedure TMain.gFormulaDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
 const
-
   RowTint = 40;
 var
   Data: PCellData;
@@ -2277,7 +2254,6 @@ begin
     FileName := UserPath + ReportFileName;
     List := TStringList.Create;
     try
-
       ReportFacts.SavePoints(FGraph, ChangeFileExt(FileName, PointsExt));
       List.Text := ReportFacts.Extend(PP.Content, FGraph, Assigned(Npp) and Npp.DarkMode, ChangeFileExt(FileName, PointsExt));
       List.SaveToFile(FileName, TEncoding.UTF8);

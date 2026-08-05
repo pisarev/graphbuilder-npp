@@ -37,11 +37,8 @@ type
   public
     constructor Create(NppParent: TNppPlugin); reintroduce; overload; virtual;
     constructor Create(AOwner: TNppForm); reintroduce; overload; virtual;
-
     function WantChildKey(Child: TControl; var Message: TNppMessage): Boolean; override;
-
     property Npp: TNppPlugin read FNpp;
-
     property DefaultCloseAction: TCloseAction read FDefaultCloseAction
       write FDefaultCloseAction;
   end;
@@ -91,5 +88,4 @@ begin
   if not Assigned(Child) then Exit(False);
   Result := Child.Perform(CN_BASE + Message.Msg, Message.WParam, Message.LParam) <> 0;
 end;
-
 end.

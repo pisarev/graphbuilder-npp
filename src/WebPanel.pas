@@ -14,13 +14,11 @@ interface
 
 uses
   Winapi.Windows, Winapi.WebView2, System.Classes, System.SysUtils, System.JSON,
-  System.Generics.Collections,
-  System.Types, System.Math, Vcl.Controls, Vcl.Forms, Vcl.ExtCtrls, Vcl.Edge,
-  Vcl.Graphics, CrossGraph, CrossGraph.Types, CrossGraph.Engine,
+  System.Generics.Collections, System.Types, System.Math, Vcl.Controls, Vcl.Forms,
+  Vcl.ExtCtrls, Vcl.Edge, Vcl.Graphics, CrossGraph, CrossGraph.Types, CrossGraph.Engine,
   CrossVision.Geometry.Types, DarkTheme;
 
 type
-
   TBookmarkEvent = function(const Slot: Integer; const Mode: string): string of object;
 
   TReportEvent = function: string of object;
@@ -41,7 +39,6 @@ type
     FRetry: Boolean;
     FNextOverlap: TNotifyEvent;
     FNextExtreme: TNotifyEvent;
-
     FKeepRatio: Boolean;
     FPenColor: string;
     function Decimals: Integer;
@@ -53,36 +50,26 @@ type
     procedure GraphExtreme(Sender: TObject);
     procedure Apply(const Root: TJSONObject);
     procedure Rebuild;
-
     function BookmarkSlot(const Slot: Integer; const Mode: string): string;
   protected
     function Curves: string;
     function Overlaps: string;
     function Extremes: string;
     function Trace(const Param: Extended): string;
-
     function Snapshot: string;
-
     function ReportPage: string;
-
     function CountPoints(const Answer: string): Integer;
   public
     constructor Create(const Host: TWinControl; const Graph: TGraph); reintroduce;
     destructor Destroy; override;
-
     function Start(const Kind: TThemeKind): Boolean;
-
     procedure Reload(const Kind: TThemeKind);
-
     function Command(const Text: string): string;
     procedure Post(const Text: string);
-
     procedure RefreshFromGraph;
-
     function Bookmarks: string;
     property Browser: TEdgeBrowser read FBrowser;
     property Ready: Boolean read FReady;
-
     property KeepRatio: Boolean read FKeepRatio write FKeepRatio;
     property PenColor: string read FPenColor write FPenColor;
     property OnBookmark: TBookmarkEvent read FOnBookmark write FOnBookmark;
@@ -93,14 +80,11 @@ function UiFile: string;
 
 implementation
 
-uses
-  Vcl.ActnList, ReportFacts;
+uses Vcl.ActnList, ReportFacts;
 
 const
   DoneCheck = 40;
-
   Digits = 5;
-
   DefaultKeepRatio = True;
   DefaultPenColor = '--c1';
   BookmarkCount = 10;
@@ -149,7 +133,6 @@ begin
   FHost := Host;
   FGraph := Graph;
   FKind := tkLight;
-
   FKeepRatio := DefaultKeepRatio;
   FPenColor := DefaultPenColor;
   FTimer := TTimer.Create(Self);
@@ -177,13 +160,11 @@ begin
     FBrowser := TEdgeBrowser.Create(Self);
     FBrowser.Parent := FHost;
     FBrowser.Align := alClient;
-
     FBrowser.UserDataFolder := IncludeTrailingPathDelimiter(GetEnvironmentVariable('LOCALAPPDATA')) +
       'GraphBuilder\WebView';
     FBrowser.OnCreateWebViewCompleted := WebCreated;
     FBrowser.OnWebMessageReceived := WebMessage;
   end;
-
   FAlign := FGraph.Align;
   FGraph.Align := alNone;
   FBrowser.BringToFront;
@@ -199,14 +180,12 @@ procedure TWebPanel.WebCreated(Sender: TCustomEdgeBrowser; AResult: HRESULT);
 begin
   if AResult <> S_OK then
   begin
-
     FBrowser.Visible := False;
     FGraph.Silent := False;
     FGraph.Align := FAlign;
     Exit;
   end;
   FReady := True;
-
   FGraph.Silent := True;
   FNextOverlap := FGraph.OnOverlap;
   FNextExtreme := FGraph.OnExtreme;
@@ -241,7 +220,6 @@ var
 begin
   Value := nil;
   if Args.ArgsInterface.TryGetWebMessageAsString(Value) <> S_OK then Exit;
-
   try
     Answer := Command(Value);
   except
@@ -257,7 +235,6 @@ begin
   if FGraph.Busy then Exit;
   FTimer.Enabled := False;
   Ready := Curves;
-
   if (FPoints = 0) and (FGraph.Formula.ActiveCount > 0) and not FRetry then
   begin
     FRetry := True;
@@ -281,7 +258,6 @@ end;
 
 function TWebPanel.Curves: string;
 const
-
   MaxSegmentPoints = 6000;
 var
   Text: TStringBuilder;
@@ -309,21 +285,17 @@ begin
       Text.Append(',"color":"').Append(Web(TColor(Data.Color))).Append('"');
       Text.Append(',"on":').Append(LowerCase(BoolToStr(FGraph.Formula.Active[I], True)));
       Text.Append(',"seg":[');
-
       FirstPart := True;
       if Check(Entire, Data.EntireBack) and Check(Entire, Data.EntireFace) then
         for J := Data.EntireBack.ArrayIndex to Data.EntireFace.ArrayIndex do
           if GetRange(Entire, Data.EntireBack, Data.EntireFace, J, L, M) then
           begin
-
             if not FirstPart then Text.Append(',');
             FirstPart := False;
             Text.Append('[');
-
             Seg := M - L + 1;
             Stride := (Seg + MaxSegmentPoints - 1) div MaxSegmentPoints;
             if Stride < 1 then Stride := 1;
-
             Prev := Default(TPoint);
             HasPix := False;
             Emit := False;
@@ -514,7 +486,6 @@ procedure TWebPanel.Apply(const Root: TJSONObject);
 begin
   FGraph.MaxX := Num('maxX', FGraph.MaxX);
   FGraph.MaxY := Num('maxY', FGraph.MaxY);
-
   FGraph.Offset := PointD(-Num('centerX', -FGraph.Offset.X), -Num('centerY', -FGraph.Offset.Y));
   FGraph.ShowGrid := Flag('grid', FGraph.ShowGrid);
   FGraph.ShowAxis := Flag('axis', FGraph.ShowAxis);
@@ -531,18 +502,14 @@ begin
   FGraph.GraphPen.Width := Round(Num('penWidth', FGraph.GraphPen.Width));
   FGraph.HSpacing := Num('hSpacing', FGraph.HSpacing);
   FGraph.VSpacing := Num('vSpacing', FGraph.VSpacing);
-
   FGraph.PolarMaxAngle := DegToRad(Num('polarAngle', RadToDeg(FGraph.PolarMaxAngle)));
   FGraph.OverlapMaxTime := Round(Num('overlapTime', FGraph.OverlapMaxTime));
   FGraph.OverlapMaxDepth := Round(Num('overlapDepth', FGraph.OverlapMaxDepth));
   FGraph.ThreadWorkTime := Round(Num('calcTime', FGraph.ThreadWorkTime));
   FGraph.ZoomInFactor := Num('zoomIn', FGraph.ZoomInFactor);
   FGraph.ZoomOutFactor := Num('zoomOut', FGraph.ZoomOutFactor);
-
   FGraph.MarkSpacing := Round(Num('markSpacing', FGraph.MarkSpacing));
-
   SetDecimals(Round(Num('decimals', Decimals)));
-
   FKeepRatio := Flag('keepRatio', FKeepRatio);
   FPenColor := Str('penColor', FPenColor);
   FGraph.SignLayout := TLayoutType(EnsureRange(Round(Num('signLayout', Ord(FGraph.SignLayout))), 0, 3));
@@ -554,9 +521,7 @@ procedure TWebPanel.Rebuild;
 begin
   FStart := GetTickCount;
   FGraph.Build;
-
   Post(Curves);
-
   FTimer.Enabled := True;
 end;
 
@@ -625,7 +590,6 @@ end;
 
 function TWebPanel.BookmarkSlot(const Slot: Integer; const Mode: string): string;
 begin
-
   if Assigned(FOnBookmark) then Result := FOnBookmark(Slot, Mode)
   else
     Result := Bookmarks;
@@ -633,7 +597,6 @@ end;
 
 procedure TWebPanel.RefreshFromGraph;
 begin
-
   Post(Snapshot);
 end;
 
@@ -664,11 +627,9 @@ var
   Html: string;
   Root: TJSONObject;
 begin
-
   if Assigned(FOnReport) then Html := FOnReport
   else
     Html := ReportFacts.Extend('<html><head></head><body></body></html>', FGraph, FKind = tkDark);
-
   Root := TJSONObject.Create;
   try
     Root.AddPair('type', 'report');
@@ -694,22 +655,17 @@ begin
   try
     Value := Root.Values['cmd'];
     if not Assigned(Value) then Exit;
-
     if Value.Value = 'size' then
     begin
-
       Width := Root.GetValue<Integer>('w', FGraph.Width);
       Height := Root.GetValue<Integer>('h', FGraph.Height);
-
       FGraph.Align := alNone;
       if (Width > 0) and (Height > 0) then FGraph.SetBounds(0, 0, Width, Height);
       Exit;
     end;
-
     if Value.Value = 'build' then
     begin
       FRetry := False;
-
       FGraph.CS := TCoordinateSystem(Ord(Root.GetValue<string>('cs', 'rect') = 'polar'));
       List := Root.Values['formulas'] as TJSONArray;
       if Assigned(List) then
@@ -728,7 +684,6 @@ begin
       Rebuild;
       Exit('{"type":"busy"}');
     end;
-
     if Value.Value = 'options' then
     begin
       FRetry := False;
@@ -737,42 +692,32 @@ begin
       Rebuild;
       Exit('{"type":"busy"}');
     end;
-
     if Value.Value = 'trace' then
       Exit(Trace(Root.GetValue<Double>('param', 0)));
-
     if Value.Value = 'bookmark' then
     begin
       Result := BookmarkSlot(Root.GetValue<Integer>('slot', 0), Root.GetValue<string>('mode', 'status'));
       Exit;
     end;
-
     if Value.Value = 'copy' then
     begin
-
       if Assigned(FindAction(FHost, 'GCopy')) then FindAction(FHost, 'GCopy').Execute;
       Exit;
     end;
-
     if Value.Value = 'paste' then
     begin
-
       if Assigned(FindAction(FHost, 'GPaste')) then FindAction(FHost, 'GPaste').Execute;
       Post(Snapshot);
       Exit;
     end;
-
     if Value.Value = 'signfont' then
     begin
-
       if Assigned(FindAction(FHost, 'GSignFont')) then FindAction(FHost, 'GSignFont').Execute;
       Rebuild;
       Exit('{"type":"busy"}');
     end;
-
     if Value.Value = 'report' then
       Exit(ReportPage);
-
     if Value.Value = 'ready' then
       Exit('{"type":"hello","engine":"crossgraph"}');
   finally

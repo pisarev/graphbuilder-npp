@@ -101,14 +101,12 @@ begin
   R := Byte(RGB) / 255;
   G := Byte(RGB shr 8) / 255;
   B := Byte(RGB shr 16) / 255;
-
   Top := R;
   if G > Top then Top := G;
   if B > Top then Top := B;
   Low := R;
   if G < Low then Low := G;
   if B < Low then Low := B;
-
   L := (Top + Low) / 2;
   C := Top - Low;
   if C = 0 then
@@ -128,10 +126,8 @@ begin
       H := (R - G) / C + 4;
     H := H / 6;
   end;
-
   if Dark and (S < DarkSat) and (C > 0) then S := DarkSat;
   if Dark then Back := DarkBack else Back := LightBack;
-
   Steps := 0;
   repeat
     if S = 0 then
@@ -157,7 +153,6 @@ begin
       if L < 0 then L := 0;
     end;
   until (Steps >= Limit) or (L >= 1) or (L <= 0);
-
   Result := Format('#%.2x%.2x%.2x', [Rv, Gv, Bv]);
 end;
 
@@ -533,7 +528,6 @@ begin
   Text := TStringBuilder.Create;
   try
   Text.Append('<section><h2>The plot report</h2>');
-
     Text.Append('<div class="tiles">');
     Tile('Coordinate system', Pick(Graph.CS = csRectangular, 'Cartesian', 'Polar'));
     if Graph.CS = csRectangular then
@@ -544,20 +538,17 @@ begin
     Tile('Quality', IntToStr(Graph.Quality));
     Tile('High precision', Pick(Graph.HighPrecision, 'on', 'off'));
     Text.Append('</div>');
-
     Head('The window');
     Text.Append('<div class="kv">');
     Text.Append(TextRow('Centre', 'X: ' + XY(-Graph.Offset.X, False) + ', Y: ' + XY(-Graph.Offset.Y, True)));
     Text.Append(TextRow('Size', 'across ' + XY(Graph.MaxX * 2, False) + ', down ' + XY(Graph.MaxY * 2, True)));
     Text.Append('</div>');
-
     Head('Formulas');
     Text.Append('<div class="chips">');
     for I := 0 to Graph.Formula.Count - 1 do
       if Graph.Formula.Active[I] then
         Text.Append('<span class="chip">').Append(Named(I)).Append('</span>');
     Text.Append('</div>');
-
     if Graph.Overlap and not Graph.Busy and (Graph.Formula.ActiveCount > 0) then
     begin
       Head('Intersections');
@@ -609,7 +600,6 @@ begin
             .Append('): there are no separate intersection points there.</p>');
       end;
     end;
-
     if Graph.Extreme and not Graph.Busy and (Graph.Formula.ActiveCount > 0) then
     begin
       Head('Extrema');
@@ -650,7 +640,6 @@ begin
       Text.Append('</table>');
       if not Had then Text.Append('<p class="note">No extrema were found.</p>');
     end;
-
     Text.Append('</section>');
     Result := Text.ToString;
   finally
@@ -743,5 +732,4 @@ begin
   else
     Result := Copy(Result, 1, Place - 1) + Block + Copy(Result, Place, MaxInt);
 end;
-
 end.
