@@ -9,6 +9,8 @@ library GraphBuilderLaz;
 
 {$MODE Delphi}
 
+{$R *.res}
+
 uses Interfaces, Forms, Windows, NotepadPP.Types, uLazPlugin, uLazPanel;
 
 procedure setInfo(Data: TNppData); cdecl;
