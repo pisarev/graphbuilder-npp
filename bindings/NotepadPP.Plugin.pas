@@ -16,9 +16,9 @@ interface
 
 uses
   {$IFDEF FPC}
-  Windows, SysUtils,
+  Windows, Messages, SysUtils,
   {$ELSE}
-  Winapi.Windows, System.SysUtils,
+  Winapi.Windows, Winapi.Messages, System.SysUtils,
   {$ENDIF}
   NotepadPP.Types;
 
@@ -58,6 +58,9 @@ type
     function SendNpp(const Message: Cardinal; const WParam: WPARAM = 0; const LParam: LPARAM = 0): LRESULT;
     function SelectedText: string;
     procedure ReplaceSelection(const Value: string);
+    function LineAtScreenPoint(const Point: TPoint): string;
+    function NewTab: HWND;
+    function SetLanguageByName(const Match: string): Boolean;
     function ConfigDir: string;
     function DarkMode: Boolean;
     procedure RegisterModeless(const Window: HWND);
@@ -76,6 +79,10 @@ implementation
 const
   SCI_GETSELTEXT = 2161;
   SCI_REPLACESEL = 2170;
+  SCI_GETLINE = 2153;
+  SCI_LINELENGTH = 2350;
+  SCI_LINEFROMPOSITION = 2166;
+  SCI_POSITIONFROMPOINTCLOSE = 2023;
 
 constructor TNppPlugin.Create;
 var
@@ -254,6 +261,88 @@ var
 begin
   Text := UTF8Encode(Value);
   SendEditor(SCI_REPLACESEL, 0, LPARAM(PAnsiChar(Text)));
+end;
+
+function TNppPlugin.LineAtScreenPoint(const Point: TPoint): string;
+var
+  Editor: HWND;
+  Local: TPoint;
+  Position, Line, Size: LRESULT;
+  Buffer: TArray<AnsiChar>;
+begin
+  Result := '';
+  Editor := CurrentScintilla;
+  if Editor = 0 then Exit;
+  Local := Point;
+  if not ScreenToClient(Editor, Local) then Exit;
+  Position := SendMessage(Editor, SCI_POSITIONFROMPOINTCLOSE, Local.X, Local.Y);
+  if Position < 0 then Exit;
+  Line := SendMessage(Editor, SCI_LINEFROMPOSITION, Position, 0);
+  Size := SendMessage(Editor, SCI_LINELENGTH, Line, 0);
+  if Size <= 0 then Exit;
+  SetLength(Buffer, Size + 1);
+  FillChar(Buffer[0], Length(Buffer), 0);
+  SendMessage(Editor, SCI_GETLINE, Line, LPARAM(@Buffer[0]));
+  Result := UTF8ToString(PAnsiChar(@Buffer[0]));
+end;
+
+function TNppPlugin.NewTab: HWND;
+begin
+  SendNpp(NPPM_MENUCOMMAND, 0, IDM_FILE_NEW);
+  Result := CurrentScintilla;
+end;
+
+procedure LanguageCommands(const Menu: HMENU; const Match: string; var Plain, Dark: Integer);
+var
+  I, Count, Id: Integer;
+  Sub: HMENU;
+  Buffer: array[0..255] of WideChar;
+  Wide: UnicodeString;
+  Name: string;
+begin
+  Count := GetMenuItemCount(Menu);
+  for I := 0 to Count - 1 do
+  begin
+    Sub := GetSubMenu(Menu, I);
+    if Sub <> 0 then
+    begin
+      LanguageCommands(Sub, Match, Plain, Dark);
+      Continue;
+    end;
+    Id := GetMenuItemID(Menu, I);
+    if (Id < IDM_LANG) or (Id >= IDM_LANG + 1000) then Continue;
+    FillChar(Buffer, SizeOf(Buffer), 0);
+    if GetMenuStringW(Menu, I, @Buffer[0], Length(Buffer), MF_BYPOSITION) = 0 then Continue;
+    Wide := PWideChar(@Buffer[0]);
+    Name := LowerCase(string(Wide));
+    if Pos(LowerCase(Match), Name) = 0 then Continue;
+    if Pos('dark', Name) > 0 then
+    begin
+      if Dark = 0 then Dark := Id;
+    end
+    else if Plain = 0 then
+      Plain := Id;
+  end;
+end;
+
+function TNppPlugin.SetLanguageByName(const Match: string): Boolean;
+var
+  Plain, Dark, Id: Integer;
+begin
+  Plain := 0;
+  Dark := 0;
+  LanguageCommands(GetMenu(FNppData.NppHandle), Match, Plain, Dark);
+  if DarkMode then
+    Id := Dark
+  else
+    Id := Plain;
+  if Id = 0 then
+    if DarkMode then
+      Id := Plain
+    else
+      Id := Dark;
+  Result := Id <> 0;
+  if Result then SendMessage(FNppData.NppHandle, WM_COMMAND, WPARAM(Id), 0);
 end;
 
 function TNppPlugin.NameForNpp: PWideChar;

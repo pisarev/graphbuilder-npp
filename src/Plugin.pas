@@ -37,6 +37,7 @@ type
     function Theme: TThemeKind; virtual;
     function HostBookmark(const Slot: Integer; const Mode: string): string; virtual;
     function HostReport: string; virtual;
+    procedure WebToEditor(const NewDocument: Boolean); virtual;
     property LineThread: TSearchThread read FLineThread write FLineThread;
     property TextThread: TSearchThread read FTextThread write FTextThread;
     property Handle: THandle read FHandle write FHandle;
@@ -217,6 +218,7 @@ var
   I, J, Size: Integer;
   S: string;
   B: UTF8String;
+
 begin
   inherited;
   case sn.nmhdr.code of
@@ -322,8 +324,24 @@ begin
     FWeb := TWebPanel.Create(Main, Main.Graph);
     FWeb.OnBookmark := HostBookmark;
     FWeb.OnReport := HostReport;
+    FWeb.OnToEditor := WebToEditor;
   end;
   FWeb.Start(Theme);
+end;
+
+procedure TPlugin.WebToEditor(const NewDocument: Boolean);
+var
+  Text: string;
+begin
+  if not Assigned(Main) or not Assigned(Main.Graph) then Exit;
+  Text := ReportFacts.AsMarkdown(Main.Graph);
+  if Trim(Text) = '' then Exit;
+  if NewDocument then
+  begin
+    NewTab;
+    SetLanguageByName('markdown');
+  end;
+  ReplaceSelection(Text);
 end;
 
 function TPlugin.HostReport: string;
@@ -404,6 +422,7 @@ begin
           if not Optimal(Thread.Script, stScript) and (Main.bFormula.Items.IndexOf(S) < 0) then
             Main.bFormula.Items.Add(S);
           Main.bFormula.Text := S;
+          if Assigned(FWeb) then FWeb.Suggest(S);
         end;
       end;
     M_TAB: Main.Next(TWinControl(Message.lParam), Boolean(Message.WParam));

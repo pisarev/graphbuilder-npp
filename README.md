@@ -1,8 +1,23 @@
 # GraphBuilder - plotting inside Notepad++
 
-A docked panel that plots the formula under your cursor. Select an expression in
-the editor, press Alt+G, and the curve is there - with its roots, its
-intersections and its extrema found for you.
+A docked panel that plots the formula under your mouse. Press Alt+G to open it,
+then point at a line of your file: if what is there parses as a formula, the
+curve appears - with its roots, its intersections and its extrema found for you.
+Select an expression and the selection wins over the line.
+
+The panel keeps one slot for what comes from the editor, so pointing around does
+not fill the list: your own formulas stay where you put them.
+
+The report goes back the other way. One button sends it to a new tab as
+Markdown - a table of roots, discontinuities, monotonic intervals, area and mean,
+with the curve itself embedded as SVG, which is text and therefore survives in a
+text editor while still drawing a real curve wherever Markdown is rendered.
+Another button drops the same report at the caret, for when you are writing a
+document rather than reading one.
+
+Markdown in Notepad++ is a user-defined language rather than a built-in one, so
+the new tab is switched to it by name; if your editor does not carry that
+language, the tab stays plain text and the report reads just as well.
 
 The panel is a web page hosted in WebView2; the computing is Object Pascal. The
 page asks and draws, Pascal answers. That split is why the same page also runs

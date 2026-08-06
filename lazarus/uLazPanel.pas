@@ -74,12 +74,16 @@ type
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     procedure SetTheme(const Dark: Boolean);
+    procedure Suggest(const Text: string);
   end;
 
 var
   Panel: TLazPanel = nil;
 
 implementation
+
+uses
+  uLazPlugin;
 
 const
   ShareMark = '#s=1.';
@@ -98,7 +102,6 @@ begin
       '-': Code[I] := '+';
       '_': Code[I] := '/';
     end;
-
   while Length(Code) mod 4 <> 0 do Code := Code + '=';
   try
     Result := DecodeStringBase64(Code);
@@ -298,6 +301,21 @@ begin
   if Assigned(FBrowser) then FBrowser.PostWebMessageAsString(Text);
 end;
 
+procedure TLazPanel.Suggest(const Text: string);
+var
+  Root: TJSONObject;
+begin
+  if not FStarted then Exit;
+  Root := TJSONObject.Create;
+  try
+    Root.Add('type', 'suggest');
+    Root.Add('text', Text);
+    Answer(Root.AsJSON);
+  finally
+    Root.Free;
+  end;
+end;
+
 procedure TLazPanel.GraphOverlap(Sender: TObject);
 begin
   Answer(Overlaps);
@@ -359,6 +377,7 @@ procedure TLazPanel.Apply(const Options: TJSONObject);
   begin
     Result := Options.Get(Name, Default);
   end;
+
 begin
   FGraph.MaxX := Num_('maxX', FGraph.MaxX);
   FGraph.MaxY := Num_('maxY', FGraph.MaxY);
@@ -476,6 +495,13 @@ begin
       Exit;
     end;
     if Cmd = 'report' then Exit(ReportPage);
+    if Cmd = 'toeditor' then
+    begin
+      if Npp is TLazPlugin then
+        TLazPlugin(Npp).ReportToEditor(ReportFacts.AsMarkdown(FGraph),
+          Root.Get('where', 'new') <> 'here');
+      Exit;
+    end;
     if Cmd = 'ready' then
     begin
       if LoadSession then Exit('');

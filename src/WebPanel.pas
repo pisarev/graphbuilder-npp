@@ -2,7 +2,7 @@
 {                                                                            }
 { WebPanel                                                                   }
 {                                                                            }
-{ Copyright © 2026 Yuriy Pisarev (ypisareff@outlook.com)                     }
+{ Copyright © 2026 Yuriy Pisarev (ypisareff@outlook.com)                      }
 {                                                                            }
 { ************************************************************************** }
 
@@ -21,12 +21,14 @@ uses
 type
   TBookmarkEvent = function(const Slot: Integer; const Mode: string): string of object;
 
+  TEditorEvent = procedure(const NewDocument: Boolean) of object;
   TReportEvent = function: string of object;
 
   TWebPanel = class(TComponent)
   private
     FOnBookmark: TBookmarkEvent;
     FOnReport: TReportEvent;
+    FOnToEditor: TEditorEvent;
     FBrowser: TEdgeBrowser;
     FGraph: TGraph;
     FHost: TWinControl;
@@ -74,6 +76,8 @@ type
     property PenColor: string read FPenColor write FPenColor;
     property OnBookmark: TBookmarkEvent read FOnBookmark write FOnBookmark;
     property OnReport: TReportEvent read FOnReport write FOnReport;
+    procedure Suggest(const Text: string);
+    property OnToEditor: TEditorEvent read FOnToEditor write FOnToEditor;
   end;
 
 function UiFile: string;
@@ -211,6 +215,21 @@ procedure TWebPanel.Post(const Text: string);
 begin
   if FReady and Assigned(FBrowser.DefaultInterface) then
     FBrowser.DefaultInterface.PostWebMessageAsString(PWideChar(Text));
+end;
+
+procedure TWebPanel.Suggest(const Text: string);
+var
+  Root: TJSONObject;
+begin
+  if Trim(Text) = '' then Exit;
+  Root := TJSONObject.Create;
+  try
+    Root.AddPair('type', 'suggest');
+    Root.AddPair('text', Text);
+    Post(Root.ToJSON);
+  finally
+    Root.Free;
+  end;
 end;
 
 procedure TWebPanel.WebMessage(Sender: TCustomEdgeBrowser; Args: TWebMessageReceivedEventArgs);
@@ -487,6 +506,7 @@ procedure TWebPanel.Apply(const Root: TJSONObject);
     else
       Result := Default;
   end;
+
 begin
   FGraph.MaxX := Num('maxX', FGraph.MaxX);
   FGraph.MaxY := Num('maxY', FGraph.MaxY);
@@ -725,6 +745,12 @@ begin
     end;
     if Value.Value = 'report' then
       Exit(ReportPage);
+    if Value.Value = 'toeditor' then
+    begin
+      if Assigned(FOnToEditor) then
+        FOnToEditor(Root.GetValue<string>('where', 'new') <> 'here');
+      Exit;
+    end;
     if Value.Value = 'ready' then
       Exit('{"type":"hello","engine":"crossgraph"}');
   finally

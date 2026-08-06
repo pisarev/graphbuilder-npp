@@ -14,6 +14,7 @@ interface
 
 uses
   {$IFDEF FPC}
+
   SysUtils, Math, Classes, Graphics,
   {$ELSE}
   System.SysUtils, System.Math, System.Classes, Vcl.Graphics,
@@ -24,6 +25,8 @@ function Extend(const Report: string; const Graph: TGraph; const Dark: Boolean;
   const PointsFile: string = ''): string;
 
 procedure SavePoints(const Graph: TGraph; const FileName: string);
+
+function AsMarkdown(const Graph: TGraph): string;
 
 implementation
 
@@ -198,8 +201,7 @@ begin
       Part := Part + List[I];
     Inc(I);
   end;
-  if Trim(Part) <> '' then
-    Result := Result + '<span class="chip">' + Trim(Part) + '</span>';
+  if Trim(Part) <> '' then Result := Result + '<span class="chip">' + Trim(Part) + '</span>';
   if Result <> '' then Result := '<div class="chips">' + Result + '</div>';
 end;
 
@@ -301,7 +303,7 @@ begin
   end;
 end;
 
-function Monotone(const Graph: TGraph; const Back, Face: Integer): string;
+function MonotoneParts(const Graph: TGraph; const Back, Face: Integer): string;
 var
   I, J: Integer;
   Points: TPointDArray;
@@ -310,19 +312,10 @@ var
 
   procedure Flush(const Till: Extended);
   const
-    Arrows: array[TDirection] of string = ('', '&#8599;', '&#8600;');
-    Classes: array[TDirection] of string = ('', 'up', 'down');
+    Names: array[TDirection] of string = ('', 'up', 'down');
   begin
     if (Direction = drNone) or (Abs(Till - Start) < Width * MinPart) then Exit;
-    Result := Result + Format(
-      '<span class="chip">%s .. %s <span class="arr %s">%s</span></span>',
-      [
-        Num(Start),
-        Num(Till),
-        Classes[Direction],
-        Arrows[Direction]
-      ]
-    );
+    Result := Result + Format('%s|%s|%s'#9, [Num(Start), Num(Till), Names[Direction]]);
   end;
 
 begin
@@ -351,6 +344,30 @@ begin
       end;
     end;
     Flush(Points[High(Points)].X);
+  end;
+end;
+
+function Monotone(const Graph: TGraph; const Back, Face: Integer): string;
+const
+  Arrows: array[Boolean] of string = ('&#8600;', '&#8599;');
+var
+  Parts, Item: string;
+  Bar: Integer;
+  Up: Boolean;
+begin
+  Result := '';
+  Parts := MonotoneParts(Graph, Back, Face);
+  while Parts <> '' do
+  begin
+    Bar := Pos(#9, Parts);
+    if Bar = 0 then Break;
+    Item := Copy(Parts, 1, Bar - 1);
+    Parts := Copy(Parts, Bar + 1, MaxInt);
+    Up := Copy(Item, Length(Item) - 1, 2) = 'up';
+    Item := Copy(Item, 1, LastDelimiter('|', Item) - 1);
+    Result := Result +
+      Format('<span class="chip">%s <span class="arr %s">%s</span></span>',
+      [StringReplace(Item, '|', ' .. ', []), Pick(Up, 'up', 'down'), Arrows[Up]]);
   end;
   if Result <> '' then Result := '<div class="chips">' + Result + '</div>';
 end;
@@ -399,8 +416,7 @@ begin
   if not Assigned(Graph) or (Graph.CS <> csRectangular) then Exit;
   for I := 0 to Graph.Formula.Count - 1 do
   begin
-    if not Graph.Formula.Active[I] or not Graph.Formula.Correct[I] then
-      Continue;
+    if not Graph.Formula.Active[I] or not Graph.Formula.Correct[I] then Continue;
     if not CurveRange(Graph, I, Back, Face) then Continue;
     AreaAndMean(Graph, Back, Face, Area, Mean);
     Count := Face - Back;
@@ -428,9 +444,9 @@ begin
     );
   end;
   if Result = '' then Exit;
-    Result := '<section class="factbox"><h2>Facts about the functions</h2>' + Result +
-      '<p class="note">Computed over the same sampling as the curve: the step ' +
-      'tightens where the function runs steep. Roots are refined by bisection.</p></section>';
+  Result := '<section class="factbox"><h2>Facts about the functions</h2>' + Result +
+    '<p class="note">Computed over the same sampling as the curve: the step ' +
+    'tightens where the function runs steep. Roots are refined by bisection.</p></section>';
 end;
 
 procedure SavePoints(const Graph: TGraph; const FileName: string);
@@ -550,14 +566,14 @@ begin
   if not Assigned(Graph) then Exit;
   Text := TStringBuilder.Create;
   try
-  Text.Append('<section><h2>The plot report</h2>');
+    Text.Append('<section><h2>The plot report</h2>');
     Text.Append('<div class="tiles">');
     Tile('Coordinate system', Pick(Graph.CS = csRectangular, 'Cartesian', 'Polar'));
     if Graph.CS = csRectangular then
       Tile('X range', XY(-Graph.MaxX - Graph.Offset.X, False) + ' .. ' +
         XY(Graph.MaxX - Graph.Offset.X, False))
-      else
-        Tile('Angle limit', Turn(Graph.PolarMaxAngle));
+    else
+      Tile('Angle limit', Turn(Graph.PolarMaxAngle));
     Tile('Quality', IntToStr(Graph.Quality));
     Tile('High precision', Pick(Graph.HighPrecision, 'on', 'off'));
     Text.Append('</div>');
@@ -597,8 +613,7 @@ begin
         Text.Append('</td></tr>');
       end;
       Text.Append('</table>');
-      if not Had then
-        Text.Append('<p class="note">No intersections were found.</p>');
+      if not Had then Text.Append('<p class="note">No intersections were found.</p>');
       if Graph.OverlapTotal > Length(Graph.OverlapArray) then
         Text.Append('<p class="note">Intersections found: ')
           .Append(IntToStr(Graph.OverlapTotal)).Append(', marked: ')
@@ -627,9 +642,8 @@ begin
     begin
       Head('Extrema');
       Had := False;
-      Text.Append(
-        '<table class="pts"><tr><th>Kind</th><th>X</th><th>Y</th>' + '<th>From the centre</th>' + Pick(Graph.CS = csRectangular, '', '<th>Angle</th>')+ '</tr>'
-      );
+      Text.Append('<table class="pts"><tr><th>Kind</th><th>X</th><th>Y</th>' + '<th>From the centre</th>' + Pick(Graph.CS = csRectangular,
+        '', '<th>Angle</th>') + '</tr>');
       for I := 0 to 1 do
       begin
         if I = 0 then
@@ -722,6 +736,276 @@ begin
     'font-size:11px;font-weight:600}' + '.rep .pair{display:flex;align-items:center;gap:6px;margin:2px 0}' +
     '.rep .note{color:var(--ink-faint,var(--r-faint));font-size:11.5px;margin:10px 0 0}' +
     '.rep .mono{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace}' + '</style>';
+end;
+
+function Cell(const Text: string): string;
+begin
+  Result := StringReplace(Trim(Text), '|', '/', [rfReplaceAll]);
+  Result := StringReplace(Result, #9, '; ', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, ' ', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, ' ', [rfReplaceAll]);
+  if Result = '' then Result := 'none';
+end;
+
+function MonotoneText(const Graph: TGraph; const Back, Face: Integer): string;
+var
+  Parts, Item, Bounds: string;
+  Bar: Integer;
+begin
+  Result := '';
+  Parts := MonotoneParts(Graph, Back, Face);
+  while Parts <> '' do
+  begin
+    Bar := Pos(#9, Parts);
+    if Bar = 0 then Break;
+    Item := Copy(Parts, 1, Bar - 1);
+    Parts := Copy(Parts, Bar + 1, MaxInt);
+    Bounds := Copy(Item, 1, LastDelimiter('|', Item) - 1);
+    if Result <> '' then Result := Result + '; ';
+    Result := Result + StringReplace(Bounds, '|', ' .. ', []) +
+      Pick(Copy(Item, Length(Item) - 1, 2) = 'up', ' up', ' down');
+  end;
+end;
+
+function Sketch(const Graph: TGraph): string;
+const
+  Width = 640;
+  Height = 360;
+  Pad = 12;
+  Limit = 1200;
+var
+  I, J, K, Back, Face, Total, Stride, Emitted: Integer;
+  Points: TPointDArray;
+  MinX, MaxX, MinY, MaxY, SpanX, SpanY, ScaleX, ScaleY: Extended;
+  Path, Colour: string;
+  Data: PFormulaData;
+  Started: Boolean;
+  Plain: TFormatSettings;
+
+  function MapX(const Value: Extended): string;
+  begin
+    Result := FormatFloat('0.##', Pad + (Value - MinX) * ScaleX, Plain);
+  end;
+
+  function MapY(const Value: Extended): string;
+  begin
+    Result := FormatFloat('0.##', Height - Pad - (Value - MinY) * ScaleY, Plain);
+  end;
+
+begin
+  Result := '';
+  if not Assigned(Graph) then Exit;
+  {$IFDEF FPC}
+  Plain := DefaultFormatSettings;
+  {$ELSE}
+  Plain := TFormatSettings.Invariant;
+  {$ENDIF}
+  Plain.DecimalSeparator := '.';
+  MinX := 0;
+  MaxX := 0;
+  MinY := 0;
+  MaxY := 0;
+  Total := 0;
+  for I := 0 to Graph.Formula.Count - 1 do
+  begin
+    if not Graph.Formula.Active[I] or not CurveRange(Graph, I, Back, Face) then Continue;
+    for J := Back to Face do
+    begin
+      Points := Graph.EntireArray[J];
+      for K := Low(Points) to High(Points) do
+      begin
+        if Total = 0 then
+        begin
+          MinX := Points[K].X;
+          MaxX := MinX;
+          MinY := Points[K].Y;
+          MaxY := MinY;
+        end
+        else begin
+          if Points[K].X < MinX then MinX := Points[K].X;
+          if Points[K].X > MaxX then MaxX := Points[K].X;
+          if Points[K].Y < MinY then MinY := Points[K].Y;
+          if Points[K].Y > MaxY then MaxY := Points[K].Y;
+        end;
+        Inc(Total);
+      end;
+    end;
+  end;
+  if Total = 0 then Exit;
+  SpanX := MaxX - MinX;
+  SpanY := MaxY - MinY;
+  if SpanX <= 0 then SpanX := 1;
+  if SpanY <= 0 then SpanY := 1;
+  ScaleX := (Width - 2 * Pad) / SpanX;
+  ScaleY := (Height - 2 * Pad) / SpanY;
+  Stride := 1;
+  if Total > Limit then Stride := (Total div Limit) + 1;
+  Result := Format('<svg viewBox="0 0 %d %d" xmlns="http://www.w3.org/2000/svg" ' + 'width="%d" height="%d">',
+    [Width, Height, Width, Height]);
+  for I := 0 to Graph.Formula.Count - 1 do
+  begin
+    if not Graph.Formula.Active[I] or not CurveRange(Graph, I, Back, Face) then Continue;
+    Data := Graph.Formula.Data[I];
+    if Assigned(Data) then
+      Colour := Web(TColor(Data.Color))
+    else
+      Colour := '#888888';
+    Path := '';
+    for J := Back to Face do
+    begin
+      Points := Graph.EntireArray[J];
+      if Length(Points) < 2 then Continue;
+      Started := False;
+      Emitted := 0;
+      K := Low(Points);
+      while K <= High(Points) do
+      begin
+        if Started then
+          Path := Path + 'L' + MapX(Points[K].X) + ' ' + MapY(Points[K].Y)
+        else begin
+          Path := Path + 'M' + MapX(Points[K].X) + ' ' + MapY(Points[K].Y);
+          Started := True;
+        end;
+        Inc(Emitted);
+        Inc(K, Stride);
+      end;
+      if Started and (Emitted > 0) then
+        Path := Path + 'L' + MapX(Points[High(Points)].X) + ' ' + MapY(Points[High(Points)].Y);
+    end;
+    if Path = '' then Continue;
+    Result := Result +
+      Format('<path d="%s" fill="none" stroke="%s" stroke-width="1.6" ' + 'stroke-linejoin="round" stroke-linecap="round"/>',
+      [Path, Colour]);
+  end;
+  Result := Result + '</svg>';
+end;
+
+function AsMarkdown(const Graph: TGraph): string;
+var
+  Text: TStringBuilder;
+  I, J, Back, Face: Integer;
+  Area, Mean: Extended;
+  Overlap: TOverlap;
+  Had: Boolean;
+  Curve: TCurveDArray;
+  Kind: string;
+  K: Integer;
+
+  procedure Fact(const Name, Value: string);
+  begin
+    Text.Append('| ').Append(Name).Append(' | ').Append(Cell(Value)).Append(' |').AppendLine;
+  end;
+
+begin
+  Result := '';
+  if not Assigned(Graph) then Exit;
+  Text := TStringBuilder.Create;
+  try
+    Text.Append('# Graph').AppendLine.AppendLine;
+    Text.Append(Pick(Graph.CS = csPolar, 'Polar coordinates', 'Cartesian coordinates'));
+    Text.Append(', X from ').Append(Num(-Graph.MaxX)).Append(' to ').Append(Num(Graph.MaxX));
+    Text.Append(', Y from ').Append(Num(-Graph.MaxY)).Append(' to ').Append(Num(Graph.MaxY));
+    Text.Append('.').AppendLine.AppendLine;
+    for I := 0 to Graph.Formula.Count - 1 do
+    begin
+      if not Graph.Formula.Active[I] or not Graph.Formula.Correct[I] then Continue;
+      Text.Append('## ').Append(Graph.Formula[I]).AppendLine.AppendLine;
+      if not CurveRange(Graph, I, Back, Face) then
+      begin
+        Text.Append('No curve was plotted.').AppendLine.AppendLine;
+        Continue;
+      end;
+      if Graph.CS <> csRectangular then
+      begin
+        Text.Append('A polar curve: roots, monotonic intervals and the area under ');
+        Text.Append('the curve are not computed for it.').AppendLine.AppendLine;
+        Continue;
+      end;
+      AreaAndMean(Graph, Back, Face, Area, Mean);
+      Text.Append('| fact | value |').AppendLine;
+      Text.Append('| --- | --- |').AppendLine;
+      Fact('Roots', Roots(Graph, I, Back, Face));
+      Fact('Domain breaks', Breaks(Graph, Back, Face));
+      Fact('Curve pieces', IntToStr(Face - Back + 1));
+      Fact('Monotonicity', MonotoneText(Graph, Back, Face));
+      Fact('Area under the curve', Num(Area));
+      Fact('Mean value', Num(Mean));
+      Text.AppendLine;
+    end;
+    Had := False;
+    for J := Low(Graph.OverlapArray) to High(Graph.OverlapArray) do
+    begin
+      Overlap := Graph.OverlapArray[J];
+      if not Graph.Formula.Active[Overlap.AFormula] then Continue;
+      if not Graph.Formula.Active[Overlap.BFormula] then Continue;
+      if not Had then
+      begin
+        Text.Append('## Intersections').AppendLine.AppendLine;
+        Text.Append('| point | X | Y | curves |').AppendLine;
+        Text.Append('| --- | --- | --- | --- |').AppendLine;
+        Had := True;
+      end;
+      Text.Append('| ').Append(Cell(Graph.OverlapName[J]));
+      Text.Append(' | ').Append(Num(Overlap.Point.X));
+      Text.Append(' | ').Append(Num(Overlap.Point.Y));
+      Text.Append(' | ').Append(Cell(Graph.Formula[Overlap.AFormula]));
+      Text.Append(' and ').Append(Cell(Graph.Formula[Overlap.BFormula]));
+      Text.Append(' |').AppendLine;
+    end;
+    if Had then
+    begin
+      if Graph.OverlapTotal > Length(Graph.OverlapArray) then
+      begin
+        Text.AppendLine;
+        Text.Append(Format('Found %d, listed %d: the rest are closer than %d pixels to one another.',
+          [Graph.OverlapTotal, Length(Graph.OverlapArray), Graph.MarkSpacing])).AppendLine;
+      end;
+      Text.AppendLine;
+    end;
+    Had := False;
+    for I := 0 to 1 do
+    begin
+      if I = 0 then
+      begin
+        Curve := Graph.MaxArray;
+        Kind := 'maximum';
+      end
+      else begin
+        Curve := Graph.MinArray;
+        Kind := 'minimum';
+      end;
+      for J := Low(Curve) to High(Curve) do
+      begin
+        if not Assigned(Curve[J]) then Continue;
+        for K := Low(Curve[J]) to High(Curve[J]) do
+        begin
+          if not Had then
+          begin
+            Text.Append('## Extrema').AppendLine.AppendLine;
+            Text.Append('| kind | X | Y |').AppendLine;
+            Text.Append('| --- | --- | --- |').AppendLine;
+            Had := True;
+          end;
+          Text.Append('| ').Append(Kind);
+          Text.Append(' | ').Append(Num(Curve[J, K].X));
+          Text.Append(' | ').Append(Num(Curve[J, K].Y));
+          Text.Append(' |').AppendLine;
+        end;
+      end;
+    end;
+    if Had then Text.AppendLine;
+    Kind := Sketch(Graph);
+    if Kind <> '' then
+    begin
+      Text.Append('## The curve').AppendLine.AppendLine;
+      Text.Append(Kind).AppendLine.AppendLine;
+      Text.Append('The drawing is embedded as SVG: text in the editor, ');
+      Text.Append('a real curve wherever it is rendered.').AppendLine;
+    end;
+    Result := Text.ToString;
+  finally
+    Text.Free;
+  end;
 end;
 
 function Extend(const Report: string; const Graph: TGraph; const Dark: Boolean;
