@@ -505,6 +505,8 @@ begin
     if Cmd = 'ready' then
     begin
       if LoadSession then Exit('');
+      if Npp is TLazPlugin then
+        Exit('{"type":"hello","engine":"crossgraph-fpc","editor":true}');
       Exit('{"type":"hello","engine":"crossgraph-fpc"}');
     end;
   finally

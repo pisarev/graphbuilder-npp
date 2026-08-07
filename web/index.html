@@ -741,6 +741,17 @@ function answer(m) {
     minute of pointing around a file. The formulas you typed yourself stay
     where you put them; the suggestion does not touch them.
   */
+  /*
+    The buttons that report into the editor are shown only when the host itself
+    says an editor is there. The presence of a host was never the right signal:
+    the demo on the site SUBSTITUTES window.chrome.webview so that the page
+    works without a plugin, and the standalone Lazarus window is a host with
+    nowhere to write. In both the buttons were visible and did nothing.
+  */
+  if (m.type === "hello") {
+    if (m.editor) document.querySelectorAll(".npp-only").forEach(b => b.hidden = false);
+    return;
+  }
   if (m.type === "suggest") {
     const text = (m.text || "").trim();
     if (!text) return;
@@ -1834,9 +1845,11 @@ el("reportBtn").onclick = () => {
   The report goes to the editor. A new tab by default: dropping dozens of lines
   into somebody else's source without asking would damage it. The second button
   is for the reader who is writing a document and asks for the report on purpose.
+
+  The handlers are always attached; whether the buttons are shown is decided by
+  the host's answer - see the "hello" branch below.
 */
 if (host) {
-  document.querySelectorAll(".npp-only").forEach(b => b.hidden = false);
   el("toTabBtn").onclick = () => send({ cmd: "toeditor", where: "new" });
   el("toCaretBtn").onclick = () => send({ cmd: "toeditor", where: "here" });
 }
