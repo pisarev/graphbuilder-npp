@@ -504,10 +504,12 @@ begin
     end;
     if Cmd = 'ready' then
     begin
-      if LoadSession then Exit('');
       if Npp is TLazPlugin then
-        Exit('{"type":"hello","engine":"crossgraph-fpc","editor":true}');
-      Exit('{"type":"hello","engine":"crossgraph-fpc"}');
+        Answer('{"type":"hello","engine":"crossgraph-fpc","editor":true}')
+      else
+        Answer('{"type":"hello","engine":"crossgraph-fpc"}');
+      LoadSession;
+      Exit('');
     end;
   finally
     Data.Free;

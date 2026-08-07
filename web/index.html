@@ -110,6 +110,16 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .field input::placeholder { color: var(--ink-faint); }
 
+/*
+  A hidden button has to disappear, not pretend.
+
+  The hidden attribute is a `display: none` from the browser stylesheet, and
+  a rule of our own overrides it. The panel sets `display: grid` on its
+  buttons, so hidden hid nothing: on the published demo the report buttons
+  were visible and did nothing, with hidden === true in the markup. What
+  needed checking was the rendering, not the attribute.
+*/
+.icon-btn[hidden] { display: none; }
 .icon-btn {
   display: grid; place-items: center; width: 30px; height: 30px;
   
