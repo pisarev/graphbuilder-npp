@@ -21,8 +21,12 @@ language, the tab stays plain text and the report reads just as well.
 
 The panel is a web page hosted in WebView2; the computing is Object Pascal. The
 page asks and draws, Pascal answers. That split is why the same page also runs
-as the [live demo](https://pisarev.github.io/mathparser-live/demo/) in a browser,
-with the engine compiled to WebAssembly instead of the plugin behind it.
+as the [live demo](https://pisarev.github.io/mathparser-live/demo/) in a browser
+- but only the parser is the same code there, compiled to WebAssembly, and it
+answers the values behind the curves. The segments, the intersections and the
+extrema are written again in JavaScript, because the plotting engine is native
+code and does not run in a browser. Treat the demo as a look at the formulas,
+not as proof that the two agree point for point.
 
 ## What is in here
 
@@ -67,7 +71,8 @@ reproduce it without a Delphi licence.
 
 WebView4Delphi is not vendored here - it is a third-party library under its own
 licence. Point `WEBVIEW4DELPHI` at a checkout of it before building the Lazarus
-version.
+version; the project needs its Lazarus package as well, and `build-lazarus.ps1`
+registers that for you rather than expecting it to be installed already.
 
 ## Building and installing
 

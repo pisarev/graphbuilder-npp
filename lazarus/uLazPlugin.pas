@@ -113,10 +113,9 @@ begin
   end;
   if (Text = '') or (Text = FLast) then Exit;
   LogStep('picked up from the editor: ' + Text);
-  if Panel.Suggest(Text) then
-    FLast := Text
-  else
-    LogStep('the panel has not started yet, the formula was not handed over');
+  FLast := Text;
+  if not Panel.Suggest(Text) then
+    LogStep('the panel has not started yet, the formula was held back');
 end;
 
 procedure TLazPlugin.DoNotify(const Notification: PSciNotification);

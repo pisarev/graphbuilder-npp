@@ -23,7 +23,8 @@
 
   WebView4Delphi is not part of this repository: it is a third-party library
   under its own licence. Point WEBVIEW4DELPHI at a checkout of it - the project
-  file resolves it through $Env(WEBVIEW4DELPHI).
+  file resolves its source paths through $Env(WEBVIEW4DELPHI), and this script
+  registers its Lazarus package for you.
 
   Run: pwsh -File build-lazarus.ps1
 #>
@@ -40,6 +41,35 @@ $Proj = Join-Path $Here 'lazarus\GraphBuilderLaz.lpi'
 
 if (-not (Test-Path $Laz)) { throw "no lazbuild: $Laz (set LAZARUS_DIR)" }
 if (-not (Test-Path $Proj)) { throw "no project: $Proj" }
+
+<#
+  The project names WebView4Delphi as a required package, and lazbuild looks for
+  packages in the list its configuration knows - not along the source paths. The
+  environment variable resolves the paths inside the project file but does not
+  make the package known, so on a Lazarus configuration where it was never
+  installed the build stopped with the package missing. On this machine it was
+  installed years ago, which is exactly why the fault stayed invisible here.
+
+  The link is registered here instead. Registering it again is harmless, so the
+  step is unconditional rather than guarded by a check for what is already there.
+
+  The file goes as a SEPARATE argument. `lazbuild --help` prints the option as
+  --add-package-link=<.lpk file>, and written that way lazbuild refuses it:
+  "Option at position 2 does not allow an argument". Its own help is wrong here.
+#>
+if ($env:WEBVIEW4DELPHI) {
+    $Lpk = Join-Path $env:WEBVIEW4DELPHI 'packages\webview4delphi.lpk'
+    if (Test-Path $Lpk) {
+        Write-Host "=== REGISTER $Lpk ==="
+        if ($Pcp) { & $Laz --pcp="$Pcp" '--add-package-link' "$Lpk" }
+        else { & $Laz '--add-package-link' "$Lpk" }
+        if ($LASTEXITCODE -ne 0) { throw "the package was not registered: $Lpk" }
+    } else {
+        throw "no package file: $Lpk (is WEBVIEW4DELPHI a checkout of the library?)"
+    }
+} else {
+    Write-Host 'WEBVIEW4DELPHI is not set: the build needs the package already installed'
+}
 
 <#
   lazbuild from trunk (seen on Lazarus 4.99 / FPC 3.3.1) fails with an access
