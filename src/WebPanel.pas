@@ -20,7 +20,6 @@ uses
 
 type
   TBookmarkEvent = function(const Slot: Integer; const Mode: string): string of object;
-
   TEditorEvent = procedure(const NewDocument: Boolean) of object;
   TReportEvent = function: string of object;
 
@@ -43,6 +42,8 @@ type
     FNextExtreme: TNotifyEvent;
     FKeepRatio: Boolean;
     FPenColor: string;
+    FState: string;
+    function PostState: Boolean;
     function Decimals: Integer;
     procedure SetDecimals(const Value: Integer);
     procedure WebCreated(Sender: TCustomEdgeBrowser; AResult: HRESULT);
@@ -621,6 +622,31 @@ begin
     Result := Bookmarks;
 end;
 
+function TWebPanel.PostState: Boolean;
+var
+  Data: TJSONValue;
+  Root: TJSONObject;
+  List: TJSONArray;
+begin
+  Result := False;
+  if Trim(FState) = '' then Exit;
+  Data := TJSONObject.ParseJSONValue(FState);
+  if not Assigned(Data) then Exit;
+  try
+    if not (Data is TJSONObject) then Exit;
+    Root := TJSONObject(Data);
+    List := Root.Values['formulas'] as TJSONArray;
+    if not Assigned(List) then Exit;
+    if (List.Count = 0) and not Root.GetValue<Boolean>('cleared', False) then Exit;
+    Root.RemovePair('cmd').Free;
+    Root.AddPair('type', 'snapshot');
+    Post(Root.ToJSON);
+    Result := True;
+  finally
+    Data.Free;
+  end;
+end;
+
 procedure TWebPanel.RefreshFromGraph;
 begin
   Post(Snapshot);
@@ -693,6 +719,7 @@ begin
     if Value.Value = 'build' then
     begin
       FRetry := False;
+      FState := Text;
       FGraph.CS := TCoordinateSystem(Ord(Root.GetValue<string>('cs', 'rect') = 'polar'));
       List := Root.Values['formulas'] as TJSONArray;
       if Assigned(List) then
@@ -752,7 +779,11 @@ begin
       Exit;
     end;
     if Value.Value = 'ready' then
-      Exit('{"type":"hello","engine":"crossgraph","editor":true,"budgets":true}');
+    begin
+      Post('{"type":"hello","engine":"crossgraph","editor":true,"budgets":true}');
+      if not PostState then Post(Snapshot);
+      Exit('');
+    end;
   finally
     Root.Free;
   end;

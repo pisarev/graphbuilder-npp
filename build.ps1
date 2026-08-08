@@ -4,7 +4,9 @@
   Written in English at the source: unlike the monorepo scripts this file exists
   only for the published repository, so there is nothing to translate later.
 
-  Notepad++ 8.9 is x64, so only x64 is built. The repository is not
+  The plugin target is x64 only - that is what this plugin supports, not a
+  property of the editor: Notepad++ itself also ships 32-bit and ARM64 builds,
+  and neither of them will load this one. The repository is not
   self-contained - it expects pascal-mathparser and pascal-crossgraph beside it.
   Override with PARSER_SRC, PARSER_JIT, and GRAPH_SRC; the Delphi folder with
   BDS_BIN.

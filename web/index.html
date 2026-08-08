@@ -640,13 +640,13 @@ function currentCS() {
 // The current sheet goes to the shelf, the new one comes off it (or the example).
 function switchSheet(from, to) {
   shelf[from] = {
-    formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace })),
+    formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor })),
     cleared: emptiedByUser && curves.length === 0
   };
   const next = shelf[to];
   curves.length = 0;
   if (next && Array.isArray(next.formulas) && (next.formulas.length || next.cleared)) {
-    next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null }));
+    next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null, editor: f.editor }));
     emptiedByUser = next.cleared && curves.length === 0;
   } else {
     freshSheet().forEach(c => curves.push(c));
@@ -853,7 +853,7 @@ function applySnapshot(m) {
     if (k in o) opt[k] = o[k];
   });
   curves.length = 0;
-  (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null }));
+  (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null, editor: f.editor }));
   emptiedByUser = curves.length === 0;
   /*
     The other system's shelf comes from the snapshot when it carries one. An
@@ -865,7 +865,7 @@ function applySnapshot(m) {
     const other = cur === "rect" ? "polar" : "rect";
     const brought = m.sheets && m.sheets[other];
     shelf[other] = (brought && Array.isArray(brought.formulas))
-      ? { formulas: brought.formulas.map(f => ({ text: f.text, on: f.on, trace: f.trace })),
+      ? { formulas: brought.formulas.map(f => ({ text: f.text, on: f.on, trace: f.trace, editor: f.editor })),
           cleared: !!brought.cleared }
       : null;
     shelf[cur] = null;
@@ -1226,7 +1226,7 @@ function state() {
       the formula itself; here it sits in the list.
     */
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
-      color: opt.multicolor ? tone(i) : css(opt.penColor) })),
+      color: opt.multicolor ? tone(i) : css(opt.penColor), editor: c.editor })),
     cleared: emptiedByUser && curves.length === 0,
     /*
       Both shelves ride in the state: the sheet of the system the person is
@@ -1236,7 +1236,7 @@ function state() {
       const cur = el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
       const out = {};
       out[cur] = {
-        formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace })),
+        formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor })),
         cleared: emptiedByUser && curves.length === 0
       };
       const other = cur === "rect" ? "polar" : "rect";
@@ -1254,8 +1254,22 @@ function build() {
 const ShareSite = "https://pisarev.github.io/mathparser-live/demo/";
 const ShareMark = "#s=1.";
 
+/*
+  The mark saying a formula came from the editor does not travel in a link.
+
+  It belongs to the working session rather than to a portable document: whoever
+  opens the link has no editor, and a marked formula would take their pick-up
+  slot - the one slot that would then be overwritten silently.
+
+  It is stripped RECURSIVELY. The mark does not sit in one place: it is in the
+  current list of formulas and in both sheet shelves inside sheets. Replacing one
+  field would leave the other two, while replacing by key through JSON covers the
+  whole tree at once - and covers whatever the state grows later.
+*/
+const withoutEditor = (key, value) => (key === "editor" ? undefined : value);
+
 function shareLink() {
-  const bytes = new TextEncoder().encode(JSON.stringify(state()));
+  const bytes = new TextEncoder().encode(JSON.stringify(state(), withoutEditor));
   let raw = "";
   bytes.forEach(b => raw += String.fromCharCode(b));
   const code = btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -1275,7 +1289,14 @@ function shareState(text) {
     const raw = atob(code);
     const bytes = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-    const value = JSON.parse(new TextDecoder().decode(bytes));
+    /*
+      Stripped on the way in as well: a link arrives from outside and anybody
+      could have typed it. Without this an old or hand-made link would mark a
+      formula as the pick-up slot, and the next formula from the editor would
+      overwrite it instead of taking a row of its own. The guard is symmetric
+      and costs one line.
+    */
+    const value = JSON.parse(new TextDecoder().decode(bytes), withoutEditor);
     return value && Array.isArray(value.formulas) ? value : null;
   } catch (e) {
     return null;

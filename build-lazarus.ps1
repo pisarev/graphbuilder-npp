@@ -36,7 +36,6 @@ $Here = $PSScriptRoot
 
 $LazDir = if ($env:LAZARUS_DIR) { $env:LAZARUS_DIR } else { 'C:\lazarus' }
 $Laz = Join-Path $LazDir 'lazbuild.exe'
-$Pcp = if ($env:LAZARUS_PCP) { $env:LAZARUS_PCP } else { '' }
 $Proj = Join-Path $Here 'lazarus\GraphBuilderLaz.lpi'
 
 if (-not (Test-Path $Laz)) { throw "no lazbuild: $Laz (set LAZARUS_DIR)" }
@@ -47,29 +46,79 @@ if (-not (Test-Path $Proj)) { throw "no project: $Proj" }
   packages in the list its configuration knows - not along the source paths. The
   environment variable resolves the paths inside the project file but does not
   make the package known, so on a Lazarus configuration where it was never
-  installed the build stopped with the package missing. On this machine it was
-  installed years ago, which is exactly why the fault stayed invisible here.
+  installed the build stopped with "Broken dependency: WebView4Delphi". On this
+  machine it was installed years ago, which is exactly why the fault stayed
+  invisible here.
 
-  The link is registered here instead. Registering it again is harmless, so the
-  step is unconditional rather than guarded by a check for what is already there.
+  The link therefore has to be registered - but NOT in your configuration.
+  Registering a package link writes into the Lazarus config and REPLACES any
+  entry that already names the same package: measured by putting a different
+  checkout in the list and running the registration, after which the entry
+  pointed at the new path. A build script that silently repoints your IDE at
+  another copy of a third-party library is worse than a build that stops.
 
-  The file goes as a SEPARATE argument. `lazbuild --help` prints the option as
-  --add-package-link=<.lpk file>, and written that way lazbuild refuses it:
-  "Option at position 2 does not allow an argument". Its own help is wrong here.
+  So the whole build runs in a throwaway copy of your configuration:
+
+    * the copy lives in a temp folder unique to this run;
+    * the source configuration is only ever read;
+    * the package link is registered in the copy;
+    * every lazbuild call of this run uses the copy;
+    * the copy is removed at the end, whatever happens;
+    * a failed copy stops the build - it does not fall back to the real one.
+
+  LAZARUS_PCP is the SOURCE of that copy, not a place this script writes to.
+
+  The .lpk goes to lazbuild as a SEPARATE argument. `lazbuild --help` prints the
+  option as --add-package-link=<.lpk file>, and written that way lazbuild refuses
+  it: "Option at position 2 does not allow an argument". Its own help is wrong.
 #>
-if ($env:WEBVIEW4DELPHI) {
-    $Lpk = Join-Path $env:WEBVIEW4DELPHI 'packages\webview4delphi.lpk'
-    if (Test-Path $Lpk) {
-        Write-Host "=== REGISTER $Lpk ==="
-        if ($Pcp) { & $Laz --pcp="$Pcp" '--add-package-link' "$Lpk" }
-        else { & $Laz '--add-package-link' "$Lpk" }
-        if ($LASTEXITCODE -ne 0) { throw "the package was not registered: $Lpk" }
-    } else {
-        throw "no package file: $Lpk (is WEBVIEW4DELPHI a checkout of the library?)"
-    }
-} else {
-    Write-Host 'WEBVIEW4DELPHI is not set: the build needs the package already installed'
+if (-not $env:WEBVIEW4DELPHI) {
+    throw 'WEBVIEW4DELPHI is not set: point it at a checkout of WebView4Delphi'
 }
+$Lpk = Join-Path $env:WEBVIEW4DELPHI 'packages\webview4delphi.lpk'
+if (-not (Test-Path $Lpk)) {
+    throw "no package file: $Lpk (is WEBVIEW4DELPHI a checkout of the library?)"
+}
+
+# Where the configuration is read from. Lazarus keeps it under LOCALAPPDATA on
+# current versions and under APPDATA on older ones; naming LAZARUS_PCP settles
+# it. If none of the three is a real configuration the build stops here rather
+# than starting from an empty one, which would not even know where FPC is.
+$SrcPcp = ''
+foreach ($c in @($env:LAZARUS_PCP, (Join-Path $env:LOCALAPPDATA 'lazarus'),
+                 (Join-Path $env:APPDATA 'lazarus'))) {
+    if ($c -and (Test-Path (Join-Path $c 'environmentoptions.xml'))) { $SrcPcp = $c; break }
+}
+if (-not $SrcPcp) {
+    throw 'no Lazarus configuration found: set LAZARUS_PCP to the folder that holds environmentoptions.xml'
+}
+
+$Pcp = Join-Path ([IO.Path]::GetTempPath()) ('graphbuilder-pcp-' + [Guid]::NewGuid().ToString('N'))
+Write-Host "=== CONFIG COPY $SrcPcp -> $Pcp ==="
+try { Copy-Item $SrcPcp $Pcp -Recurse -Force -ErrorAction Stop }
+catch { throw "the configuration could not be copied: $_" }
+
+try {
+    <#
+      A copied configuration can carry a RELATIVE path to the Lazarus folder -
+      the stock installers write "..\lazarus" - and relative to a temp folder it
+      resolves to nothing. Seen live: the copy failed with "Invalid Lazarus
+      directory". The path is made absolute in the copy only.
+    #>
+    $EnvXml = Join-Path $Pcp 'environmentoptions.xml'
+    if (Test-Path $EnvXml) {
+        $Doc = [xml](Get-Content -Raw $EnvXml)
+        $Node = $Doc.SelectSingleNode('//LazarusDirectory')
+        if ($Node -and -not [IO.Path]::IsPathRooted($Node.GetAttribute('Value'))) {
+            $Node.SetAttribute('Value', $LazDir)
+            $Doc.Save($EnvXml)
+            Write-Host "    Lazarus folder in the copy set to $LazDir"
+        }
+    }
+
+    Write-Host "=== REGISTER $Lpk ==="
+    & $Laz --pcp="$Pcp" '--add-package-link' "$Lpk"
+    if ($LASTEXITCODE -ne 0) { throw "the package was not registered: $Lpk" }
 
 <#
   lazbuild from trunk (seen on Lazarus 4.99 / FPC 3.3.1) fails with an access
@@ -78,15 +127,21 @@ if ($env:WEBVIEW4DELPHI) {
   isolation: remove the .lps of the stock WebView4Delphi demo and it fails the
   same way. Hence the clean-up before the build.
 #>
-if (-not $Keep) {
-    foreach ($d in @((Join-Path $Here 'lazarus\lib'), (Join-Path $Here 'lazarus\bin'))) {
-        if (Test-Path $d) { Remove-Item $d -Recurse -Force }
+    if (-not $Keep) {
+        foreach ($d in @((Join-Path $Here 'lazarus\lib'), (Join-Path $Here 'lazarus\bin'))) {
+            if (Test-Path $d) { Remove-Item $d -Recurse -Force }
+        }
     }
-}
 
-Write-Host '=== BUILD GraphBuilderLaz.dll (Lazarus/FPC, win64) ==='
-if ($Pcp) { & $Laz --pcp="$Pcp" $Proj } else { & $Laz $Proj }
-if ($LASTEXITCODE -ne 0) { throw 'the build did not pass' }
+    Write-Host '=== BUILD GraphBuilderLaz.dll (Lazarus/FPC, win64) ==='
+    & $Laz --pcp="$Pcp" $Proj
+    if ($LASTEXITCODE -ne 0) { throw 'the build did not pass' }
+}
+finally {
+    # Whatever happened above, the throwaway configuration goes. Your own is
+    # untouched by construction: nothing here ever wrote to it.
+    Remove-Item $Pcp -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 <#
   Lazarus appends .exe to the target name even though the .lpr is declared a
