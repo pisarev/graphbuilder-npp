@@ -112,9 +112,11 @@ begin
     Text := Formula(LineAtScreenPoint(Point));
   end;
   if (Text = '') or (Text = FLast) then Exit;
-  FLast := Text;
   LogStep('picked up from the editor: ' + Text);
-  Panel.Suggest(Text);
+  if Panel.Suggest(Text) then
+    FLast := Text
+  else
+    LogStep('the panel has not started yet, the formula was not handed over');
 end;
 
 procedure TLazPlugin.DoNotify(const Notification: PSciNotification);

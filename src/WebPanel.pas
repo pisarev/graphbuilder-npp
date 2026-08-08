@@ -752,7 +752,7 @@ begin
       Exit;
     end;
     if Value.Value = 'ready' then
-      Exit('{"type":"hello","engine":"crossgraph","editor":true}');
+      Exit('{"type":"hello","engine":"crossgraph","editor":true,"budgets":true}');
   finally
     Root.Free;
   end;

@@ -74,10 +74,11 @@ pwsh -File build.ps1
 pwsh -File install.ps1
 ```
 
-Only x64 is built: Notepad++ 8.9 is x64. Installing needs administrator rights
-and a closed editor - Notepad++ holds the library open while it runs, and a copy
-over a running editor fails silently, leaving the previous version in place.
-`install.ps1` refuses to do that and says so.
+Only x64 is built. Notepad++ ships 32-bit and ARM64 editions as well, and
+neither is supported here - the plugin needs a 64-bit editor. Installing needs
+administrator rights and a closed editor: Notepad++ holds the library open while
+it runs, and a copy over a running editor fails silently, leaving the previous
+version in place. `install.ps1` refuses to do that and says so.
 
 ## The bindings are ours
 

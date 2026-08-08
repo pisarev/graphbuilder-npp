@@ -119,7 +119,8 @@ button { border: 0; background: none; cursor: pointer; }
   were visible and did nothing, with hidden === true in the markup. What
   needed checking was the rendering, not the attribute.
 */
-.icon-btn[hidden] { display: none; }
+.icon-btn[hidden] { display: none; } .row[hidden] { display: none; }
+.group[hidden] { display: none; }
 .icon-btn {
   display: grid; place-items: center; width: 30px; height: 30px;
   
@@ -514,7 +515,7 @@ select.num { text-align: left; width: 108px; }
       <details class="group">
         <summary>Precision</summary>
         <div class="rows">
-          <div class="row"><label>Sampling accuracy</label><input class="num" data-opt="accuracy" value="1"></div>
+          <div class="row budget-only" hidden><label>Sampling accuracy</label><input class="num" data-opt="accuracy" value="1"></div>
           <div class="row"><label>Decimal places</label><input class="num" data-opt="decimals" value="6"></div>
           <div class="row"><label>High precision</label><button class="switch" data-opt="precise" aria-pressed="false" aria-label="High precision"></button></div>
         </div>
@@ -544,12 +545,12 @@ select.num { text-align: left; width: 108px; }
         </div>
       </details>
 
-      <details class="group">
+      <details class="group budget-only" hidden>
         <summary>Computation limits</summary>
         <div class="rows">
-          <div class="row"><label>Computation time, ms</label><input class="num" data-opt="calcTime" value="5000"></div>
-          <div class="row"><label>Intersection search, ms</label><input class="num" data-opt="overlapTime" value="1000"></div>
-          <div class="row"><label>Search depth</label><input class="num" data-opt="overlapDepth" value="16"></div>
+          <div class="row budget-only" hidden><label>Computation time, ms</label><input class="num" data-opt="calcTime" value="5000"></div>
+          <div class="row budget-only" hidden><label>Intersection search, ms</label><input class="num" data-opt="overlapTime" value="1000"></div>
+          <div class="row budget-only" hidden><label>Search depth</label><input class="num" data-opt="overlapDepth" value="16"></div>
         </div>
         <div class="hint">When time runs out, computation stops and returns what it has.</div>
       </details>
@@ -758,8 +759,18 @@ function answer(m) {
     works without a plugin, and the standalone Lazarus window is a host with
     nowhere to write. In both the buttons were visible and did nothing.
   */
+  /*
+    Evaluation budgets follow the same rule. Sampling accuracy, computation
+    time, and the time and depth of the intersection search are wired up in the
+    native engine only. The WebAssembly build evaluates formulas; the analysis
+    of the graph in the browser is written again in JavaScript and knows nothing
+    about those budgets. A setting on display that nobody reads is worse than a
+    setting that is absent: a reader turns it and concludes something about
+    behaviour that is not there.
+  */
   if (m.type === "hello") {
     if (m.editor) document.querySelectorAll(".npp-only").forEach(b => b.hidden = false);
+    if (m.budgets) document.querySelectorAll(".budget-only").forEach(b => b.hidden = false);
     return;
   }
   if (m.type === "suggest") {

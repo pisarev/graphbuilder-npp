@@ -30,6 +30,8 @@ type
     FStart: Cardinal;
     FPage: string;
     FStarted: Boolean;
+    FReady: Boolean;
+    FPending: string;
     FDark: Boolean;
     FState: string;
     FPoints: Integer;
@@ -44,6 +46,8 @@ type
     procedure Tick(Sender: TObject);
     procedure Created(Sender: TObject);
     procedure Failed(Sender: TObject; aErrorCode: HRESULT; const aErrorMessage: wvstring);
+    procedure Leaving(Sender: TObject; const aWebView: ICoreWebView2;
+      const aArgs: ICoreWebView2NavigationStartingEventArgs);
     procedure Incoming(Sender: TObject; const aWebView: ICoreWebView2;
       const aArgs: ICoreWebView2WebMessageReceivedEventArgs);
     procedure GraphOverlap(Sender: TObject);
@@ -74,7 +78,7 @@ type
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     procedure SetTheme(const Dark: Boolean);
-    procedure Suggest(const Text: string);
+    function Suggest(const Text: string): Boolean;
   end;
 
 var
@@ -180,6 +184,7 @@ begin
   FBrowser.OnAfterCreated := Created;
   FBrowser.OnWebMessageReceived := Incoming;
   FBrowser.OnInitializationError := Failed;
+  FBrowser.OnNavigationStarting := Leaving;
   FHost.Browser := FBrowser;
   FWait := TTimer.Create(Self);
   FWait.Enabled := False;
@@ -266,6 +271,12 @@ begin
     [rfReplaceAll]) + '?theme=' + Suffix[Dark] + '&v=' + IntToStr(FileAge(FPage)));
 end;
 
+procedure TLazPanel.Leaving(Sender: TObject; const aWebView: ICoreWebView2;
+  const aArgs: ICoreWebView2NavigationStartingEventArgs);
+begin
+  FReady := False;
+end;
+
 procedure TLazPanel.Failed(Sender: TObject; aErrorCode: HRESULT; const aErrorMessage: wvstring);
 begin
   LogStep('WebView2 ERROR: ' + string(aErrorMessage));
@@ -301,11 +312,16 @@ begin
   if Assigned(FBrowser) then FBrowser.PostWebMessageAsString(Text);
 end;
 
-procedure TLazPanel.Suggest(const Text: string);
+function TLazPanel.Suggest(const Text: string): Boolean;
 var
   Root: TJSONObject;
 begin
-  if not FStarted then Exit;
+  Result := False;
+  if not FReady then
+  begin
+    FPending := Text;
+    Exit;
+  end;
   Root := TJSONObject.Create;
   try
     Root.Add('type', 'suggest');
@@ -314,6 +330,7 @@ begin
   finally
     Root.Free;
   end;
+  Result := True;
 end;
 
 procedure TLazPanel.GraphOverlap(Sender: TObject);
@@ -475,7 +492,7 @@ begin
       Exit(BusyReply);
     end;
     if Cmd = 'signfont' then Exit(SignFont);
-    if Cmd = 'trace' then Exit(Trace(Root.Get('param', Double(0))));
+    if Cmd = 'trace' then Exit(Trace(Root.Get('param', 0.0)));
     if Cmd = 'bookmark' then
       Exit(BookmarkSlot(Root.Get('slot', 0), Root.Get('mode', 'status')));
     if Cmd = 'copy' then
@@ -505,10 +522,17 @@ begin
     if Cmd = 'ready' then
     begin
       if Npp is TLazPlugin then
-        Answer('{"type":"hello","engine":"crossgraph-fpc","editor":true}')
+        Answer('{"type":"hello","engine":"crossgraph-fpc","editor":true,"budgets":true}')
       else
         Answer('{"type":"hello","engine":"crossgraph-fpc"}');
       LoadSession;
+      FReady := True;
+      if FPending <> '' then
+      begin
+        LogStep('handing over the formula that was held back: ' + FPending);
+        Suggest(FPending);
+        FPending := '';
+      end;
       Exit('');
     end;
   finally
