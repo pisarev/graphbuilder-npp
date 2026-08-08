@@ -43,7 +43,9 @@ somewhere/
 ```
 
 Override with `PARSER_SRC`, `PARSER_JIT`, and `GRAPH_SRC` if they live elsewhere,
-and `BDS_BIN` if Delphi is not in the standard place.
+and `BDS_BIN` if Delphi is not in the standard place. Those four are read by the
+Delphi build. The Lazarus project takes its paths from the `.lpi` and wants the
+three repositories side by side, as above.
 
 ## Two builds of one plugin
 
@@ -69,9 +71,19 @@ version.
 
 ## Building and installing
 
+The build that ships is the Lazarus one:
+
+```
+pwsh -File build-lazarus.ps1
+pwsh -File install.ps1
+```
+
+The Delphi build is kept for comparison and needs a switch on both steps, since
+it produces a differently named library:
+
 ```
 pwsh -File build.ps1
-pwsh -File install.ps1
+pwsh -File install.ps1 -Delphi
 ```
 
 Only x64 is built. Notepad++ ships 32-bit and ARM64 editions as well, and

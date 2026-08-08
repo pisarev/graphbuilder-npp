@@ -59,6 +59,9 @@ Get-ChildItem $Out -Filter *.dll | Select-Object Name, Length
 
 Write-Host @'
 
-To install (needs administrator rights):
-  pwsh -File install.ps1
+To install this build (needs administrator rights):
+  pwsh -File install.ps1 -Delphi
+
+The switch is not optional here: this script builds the Delphi library, and
+install.ps1 without it looks for the Lazarus one.
 '@
