@@ -1251,6 +1251,25 @@ function build() {
   send(Object.assign({ cmd: "build" }, state()));
 }
 
+/*
+  A settings change sends the WHOLE state, not the settings alone.
+
+  What used to leave here was {cmd:"options", options:...} and nothing else. The
+  host applied the settings to the engine, but its own state stayed as it was: it
+  was written on build only. After that any page reload - and the theme is changed
+  by reloading - brought the old state back and undid the setting. On a sheet the
+  person had cleared on purpose the setting did not reach the session at all,
+  because no build followed it.
+
+  Now build and options carry the same thing - the whole state; they differ only
+  in why the message was sent. The host does not have to rebuild the state out of
+  its own internals, so there is nothing left to lose: not the deliberately empty
+  sheet, not the second coordinate system, not the formula slot from the editor.
+*/
+function sendOptions() {
+  send(Object.assign({ cmd: "options" }, state()));
+}
+
 const ShareSite = "https://pisarev.github.io/mathparser-live/demo/";
 const ShareMark = "#s=1.";
 
@@ -1742,7 +1761,7 @@ el("tools").addEventListener("click", e => {
   const key = b.dataset.t;
   opt[key] = !opt[key];
   b.setAttribute("aria-pressed", String(opt[key]));
-  send({ cmd: "options", options: options() });
+  sendOptions();
   paint();
 });
 
@@ -1766,7 +1785,7 @@ document.querySelectorAll(".switch").forEach(s => {
       if (s.dataset.opt === "keepRatio" && active) { size(); return; }
 
       paint();
-      send({ cmd: "options", options: options() });
+      sendOptions();
     }
   };
 });
@@ -1794,7 +1813,7 @@ document.querySelectorAll(".num[data-opt]").forEach(n => {
     else if (n.dataset.opt === "centerX") view.cx = value;
     else if (n.dataset.opt === "centerY") view.cy = value;
     else opt[n.dataset.opt] = value;
-    send({ cmd: "options", options: options() });
+    sendOptions();
     paint();
   };
 });
@@ -1807,7 +1826,7 @@ document.querySelectorAll(".swatches").forEach(box => {
 
     opt.penColor = palette[[...box.children].indexOf(b)] || palette[0];
     paint();
-    send({ cmd: "options", options: options() });
+    sendOptions();
   };
 });
 
@@ -1829,7 +1848,7 @@ el("quality").onchange = () => { clearTimeout(qualityTimer); sendQuality(); };
 
 function sendQuality() {
   clearTimeout(qualityTimer);
-  send({ cmd: "options", options: options() });
+  sendOptions();
 }
 el("gearBtn").onclick = () => el("drawer").classList.toggle("open");
 el("closeDrawer").onclick = () => el("drawer").classList.remove("open");
@@ -1873,7 +1892,7 @@ el("fontBtn").onclick = () => send({ cmd: "signfont" });
 el("signLayout").onchange = () => {
   opt.signLayout = el("signLayout").selectedIndex;
   paint();
-  send({ cmd: "options", options: options() });
+  sendOptions();
 };
 
 el("reportBtn").onclick = () => {

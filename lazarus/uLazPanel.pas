@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Math, Controls, Forms, ExtCtrls, Graphics,
-  Clipbrd, Dialogs, base64, fpjson, jsonparser, uWVBrowser, uWVWinControl, uWVWindowParent,
+  Clipbrd, Dialogs, fpjson, jsonparser, uWVBrowser, uWVWinControl, uWVWindowParent,
   uWVTypes, uWVTypeLibrary, uWVBrowserBase, uWVLoader, uWVCoreWebView2Args, NotepadPP.Plugin,
   NotepadPP.Docking, uLazTrace, CrossVision.Geometry.Types, CrossGraph.Types, CrossGraph.Engine,
   CrossGraph, ReportFacts;
@@ -70,6 +70,7 @@ type
     function SessionFile: string;
     function Stored: string;
     procedure ApplyNative(const Root: TJSONObject);
+    function Restorable(const Root: TJSONObject): Boolean;
     procedure SaveSession;
     function LoadSession: Boolean;
     procedure LoadState(const Text: string);
@@ -86,33 +87,7 @@ var
 
 implementation
 
-uses
-  uLazPlugin;
-
-const
-  ShareMark = '#s=1.';
-
-function ShareState(const Text: string): string;
-var
-  Code: string;
-  At, I: Integer;
-begin
-  Result := '';
-  At := Pos(ShareMark, Text);
-  if At = 0 then Exit;
-  Code := Trim(Copy(Text, At + Length(ShareMark), MaxInt));
-  for I := 1 to Length(Code) do
-    case Code[I] of
-      '-': Code[I] := '+';
-      '_': Code[I] := '/';
-    end;
-  while Length(Code) mod 4 <> 0 do Code := Code + '=';
-  try
-    Result := DecodeStringBase64(Code);
-  except
-    Result := '';
-  end;
-end;
+uses uLazPlugin, uShare;
 
 const
   MaxSegmentPoints = 6000;
@@ -487,6 +462,8 @@ begin
     if Cmd = 'options' then
     begin
       FRetry := False;
+      FState := Text;
+      SaveSession;
       if Root.Find('options') is TJSONObject then Apply(TJSONObject(Root.Find('options')));
       Rebuild;
       Exit(BusyReply);
@@ -506,9 +483,9 @@ begin
     if Cmd = 'paste' then
     begin
       if ShareState(Clipboard.AsText) <> '' then
-        LoadState(ShareState(Clipboard.AsText))
+        LoadState(WithoutEditor(ShareState(Clipboard.AsText)))
       else
-        LoadState(Clipboard.AsText);
+        LoadState(WithoutEditor(Clipboard.AsText));
       Exit;
     end;
     if Cmd = 'report' then Exit(ReportPage);
@@ -898,12 +875,37 @@ begin
   Root.Delete('native');
 end;
 
+function TLazPanel.Restorable(const Root: TJSONObject): Boolean;
+var
+  List: TJSONData;
+begin
+  Result := False;
+  if not Assigned(Root) then Exit;
+  List := Root.Find('formulas');
+  if not (List is TJSONArray) then Exit;
+  Result := (TJSONArray(List).Count > 0) or Root.Get('cleared', False);
+end;
+
 procedure TLazPanel.SaveSession;
 var
   List: TStringList;
+  Data: TJSONData;
+  Keep: Boolean;
 begin
   if FState = '' then Exit;
-  if Pos('"formulas":[]', FState) > 0 then Exit;
+  Data := nil;
+  Keep := False;
+  try
+    try
+      Data := GetJSON(FState);
+      Keep := (Data is TJSONObject) and Restorable(TJSONObject(Data));
+    except
+      Keep := False;
+    end;
+  finally
+    Data.Free;
+  end;
+  if not Keep then Exit;
   List := TStringList.Create;
   try
     List.Text := Stored;
@@ -953,7 +955,7 @@ begin
     if not (Data is TJSONObject) then Exit;
     Root := TJSONObject(Data);
     if not (Root.Find('formulas') is TJSONArray) then Exit;
-    if (TJSONArray(Root.Find('formulas')).Count = 0) and not Root.Get('cleared', False) then Exit;
+    if not Restorable(Root) then Exit;
     ApplyNative(Root);
     Root.Delete('cmd');
     Root.Add('type', 'snapshot');

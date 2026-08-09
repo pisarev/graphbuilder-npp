@@ -741,6 +741,7 @@ begin
     if Value.Value = 'options' then
     begin
       FRetry := False;
+      FState := Text;
       Item := Root.Values['options'] as TJSONObject;
       if Assigned(Item) then Apply(Item);
       Rebuild;

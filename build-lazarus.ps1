@@ -80,25 +80,72 @@ if (-not (Test-Path $Lpk)) {
     throw "no package file: $Lpk (is WEBVIEW4DELPHI a checkout of the library?)"
 }
 
-# Where the configuration is read from. Lazarus keeps it under LOCALAPPDATA on
-# current versions and under APPDATA on older ones; naming LAZARUS_PCP settles
-# it. If none of the three is a real configuration the build stops here rather
-# than starting from an empty one, which would not even know where FPC is.
-$SrcPcp = ''
-foreach ($c in @($env:LAZARUS_PCP, (Join-Path $env:LOCALAPPDATA 'lazarus'),
-                 (Join-Path $env:APPDATA 'lazarus'))) {
-    if ($c -and (Test-Path (Join-Path $c 'environmentoptions.xml'))) { $SrcPcp = $c; break }
+<#
+  Where the configuration is read from.
+
+  LAZARUS_PCP, when set, is the ANSWER and not a suggestion. The first version of
+  this searched a list - the variable, then LOCALAPPDATA, then APPDATA - and took
+  the first entry that happened to hold an environmentoptions.xml. So a variable
+  pointing at a typo, or at a configuration that has not been created yet, was
+  silently replaced by your ordinary one: the build then used settings you never
+  named. An explicit override that is quietly ignored is worse than none.
+
+  Now: set - checked alone, and a mismatch stops the build with that very path.
+  Unset - then the standard places are searched, LOCALAPPDATA first, since current
+  Lazarus keeps it there and older versions under APPDATA.
+
+  The third place is config_lazarus beside the Lazarus folder. Some installers put
+  it there and leave the first two empty: the build refused on the very machine
+  that prepares the release, with a correct message that still cost a step to act
+  on.
+#>
+<#
+  The path is glued with Combine rather than Join-Path on purpose. Join-Path
+  resolves against drives, so a variable naming a drive that does not exist -
+  the very typo this check exists to catch - made it throw its own error, and the
+  explanatory message below never appeared. Combine is plain string work and
+  never touches the filesystem.
+#>
+function Usable([string] $Path) {
+    if (-not $Path) { return $false }
+    return Test-Path ([IO.Path]::Combine($Path, 'environmentoptions.xml'))
 }
-if (-not $SrcPcp) {
-    throw 'no Lazarus configuration found: set LAZARUS_PCP to the folder that holds environmentoptions.xml'
+
+$SrcPcp = ''
+if ($env:LAZARUS_PCP) {
+    if (-not (Usable $env:LAZARUS_PCP)) {
+        throw "LAZARUS_PCP does not hold a Lazarus configuration: $($env:LAZARUS_PCP) (no environmentoptions.xml there)"
+    }
+    $SrcPcp = $env:LAZARUS_PCP
+} else {
+    foreach ($c in @([IO.Path]::Combine("$env:LOCALAPPDATA", 'lazarus'),
+                     [IO.Path]::Combine("$env:APPDATA", 'lazarus'),
+                     [IO.Path]::Combine($LazDir, '..', 'config_lazarus'))) {
+        if (Usable $c) { $SrcPcp = [IO.Path]::GetFullPath($c); break }
+    }
+    if (-not $SrcPcp) {
+        throw ('no Lazarus configuration found in ' + $env:LOCALAPPDATA + '\lazarus, ' +
+               $env:APPDATA + '\lazarus or beside ' + $LazDir +
+               ': set LAZARUS_PCP to the folder that holds environmentoptions.xml')
+    }
 }
 
 $Pcp = Join-Path ([IO.Path]::GetTempPath()) ('graphbuilder-pcp-' + [Guid]::NewGuid().ToString('N'))
 Write-Host "=== CONFIG COPY $SrcPcp -> $Pcp ==="
-try { Copy-Item $SrcPcp $Pcp -Recurse -Force -ErrorAction Stop }
-catch { throw "the configuration could not be copied: $_" }
 
+<#
+  The copy is INSIDE the try, and that is the whole point of moving it here.
+
+  It used to sit above with a try/catch of its own, and the promise "the throwaway
+  copy goes, whatever happens" was false exactly where it mattered: a copy that
+  fails halfway leaves part of the tree behind, and the finally that would have
+  removed it had not been entered yet. Remove-Item is safe even if the folder
+  never appeared, so nothing is lost by covering the copy too.
+#>
 try {
+    try { Copy-Item $SrcPcp $Pcp -Recurse -Force -ErrorAction Stop }
+    catch { throw "the configuration could not be copied: $_" }
+
     <#
       A copied configuration can carry a RELATIVE path to the Lazarus folder -
       the stock installers write "..\lazarus" - and relative to a temp folder it
