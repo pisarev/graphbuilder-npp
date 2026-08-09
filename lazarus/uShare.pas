@@ -11,8 +11,12 @@ unit uShare;
 
 interface
 
+type
+  TClipboardKind = (ckShare, ckState, ckPlain, ckBroken);
+
 function ShareState(const Text: string): string;
 function WithoutEditor(const Text: string): string;
+function ClipboardKind(const Text: string): TClipboardKind;
 
 implementation
 
@@ -76,6 +80,29 @@ begin
     end;
     DropEditor(Data);
     Result := Data.AsJSON;
+  finally
+    Data.Free;
+  end;
+end;
+
+function ClipboardKind(const Text: string): TClipboardKind;
+var
+  Data: TJSONData;
+  List: TJSONData;
+begin
+  if ShareState(Text) <> '' then Exit(ckShare);
+  if Pos(ShareMark, Text) > 0 then Exit(ckBroken);
+  Result := ckPlain;
+  Data := nil;
+  try
+    try
+      Data := GetJSON(Text);
+    except
+      Exit;
+    end;
+    if not (Data is TJSONObject) then Exit;
+    List := TJSONObject(Data).Find('formulas');
+    if List is TJSONArray then Result := ckState;
   finally
     Data.Free;
   end;

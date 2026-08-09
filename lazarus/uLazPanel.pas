@@ -410,7 +410,7 @@ var
   Root: TJSONObject;
   List: TJSONArray;
   Item: TJSONObject;
-  Cmd, Formula: string;
+  Cmd, Formula, Pasted: string;
   I, W, H: Integer;
 begin
   Result := '';
@@ -482,10 +482,21 @@ begin
     end;
     if Cmd = 'paste' then
     begin
-      if ShareState(Clipboard.AsText) <> '' then
-        LoadState(WithoutEditor(ShareState(Clipboard.AsText)))
+      Pasted := Clipboard.AsText;
+      case ClipboardKind(Pasted) of
+        ckShare: LoadState(WithoutEditor(ShareState(Pasted)));
+        ckState: LoadState(WithoutEditor(Pasted));
+        ckBroken:;
       else
-        LoadState(WithoutEditor(Clipboard.AsText));
+        Item := TJSONObject.Create;
+        try
+          Item.Add('type', 'clipboard');
+          Item.Add('text', Pasted);
+          Answer(Item.AsJSON);
+        finally
+          Item.Free;
+        end;
+      end;
       Exit;
     end;
     if Cmd = 'report' then Exit(ReportPage);
@@ -1003,6 +1014,7 @@ begin
     Dialog.Free;
   end;
   Rebuild;
+  SaveSession;
 end;
 
 function TLazPanel.BookmarkSlot(const Slot: Integer; const Mode: string): string;
