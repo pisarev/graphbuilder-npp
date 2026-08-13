@@ -1374,7 +1374,9 @@ function paintTraceValues() {
     if (live && c.on && c.trace) {
       const p = data.trace.points.find(q => q.i === i);
       if (p && isFinite(p.y)) {
-        text = data.trace.polar ? Math.hypot(p.x, p.y).toFixed(dec) : (+p.y).toFixed(dec);
+        text = data.trace.polar
+          ? (p.x * Math.cos(data.trace.param) + p.y * Math.sin(data.trace.param)).toFixed(dec)
+          : (+p.y).toFixed(dec);
         dim = false;
       }
     }
@@ -1624,6 +1626,26 @@ function paint() {
 }
 
 let traceAt = 0;
+let traceWait = null;
+
+function askTrace() {
+  if (!cursor) return;
+  const left = 33 - (Date.now() - traceAt);
+  if (left > 0) {
+    if (!traceWait) traceWait = setTimeout(() => { traceWait = null; askTrace(); }, left);
+    return;
+  }
+  if (traceWait) { clearTimeout(traceWait); traceWait = null; }
+  traceAt = Date.now();
+  const gx = fromX(cursor.x, canvas.clientWidth), gy = fromY(cursor.y, canvas.clientHeight);
+  const isPolar = el("cs").querySelector('[aria-pressed="true"]').dataset.cs === "polar";
+  let param = gx;
+  if (isPolar) {
+    param = Math.atan2(gy, gx);
+    if (param < 0) param += Math.PI * 2;
+  }
+  send({ cmd: "trace", param });
+}
 
 let rebuildTimer = 0;
 
@@ -1698,20 +1720,7 @@ el("stage").addEventListener("mousemove", e => {
 
   cursor = { x: e.clientX - r.left, y: e.clientY - r.top };
   paint();
-
-  const now = Date.now();
-  if (now - traceAt > 33) {
-    traceAt = now;
-    const gx = fromX(cursor.x, canvas.clientWidth), gy = fromY(cursor.y, canvas.clientHeight);
-
-    const isPolar = el("cs").querySelector('[aria-pressed="true"]').dataset.cs === "polar";
-    let param = gx;
-    if (isPolar) {
-      param = Math.atan2(gy, gx);
-      if (param < 0) param += Math.PI * 2;
-    }
-    send({ cmd: "trace", param });
-  }
+  askTrace();
 });
 el("stage").addEventListener("mouseleave", () => {
   if (drag) return;
