@@ -1443,9 +1443,10 @@ const fromY = (py, h) => (h - py) / h * view.h * 2 - view.h + view.cy;
 function traceGeometry(w, h) {
   if (!data.trace) return null;
   if (data.trace.polar) {
-    const cx = toX(0, w), cy = toY(0, h), far = Math.hypot(w, h);
-    const dx = Math.cos(data.trace.param), dy = -Math.sin(data.trace.param);
-    return { x1: cx - dx * far, y1: cy - dy * far, x2: cx + dx * far, y2: cy + dy * far };
+    const far = (Math.hypot(view.w, view.h) + Math.hypot(view.cx, view.cy)) * 4;
+    const c = Math.cos(data.trace.param), s = Math.sin(data.trace.param);
+    return { x1: toX(-c * far, w), y1: toY(-s * far, h),
+             x2: toX(c * far, w), y2: toY(s * far, h) };
   }
   const px = toX(data.trace.param, w);
   return { x1: px, y1: 0, x2: px, y2: h };
