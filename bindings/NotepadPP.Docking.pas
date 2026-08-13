@@ -14,7 +14,8 @@ uses
   {$IFDEF FPC}
   Windows, Messages, LMessages, CommCtrl, Classes, SysUtils, Controls, Forms,
   {$ELSE}
-  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls, Vcl.Forms,
+  Winapi.Windows, Winapi.Messages, System.Classes, System.SysUtils, Vcl.Controls,
+  Vcl.Forms,
   {$ENDIF}
   NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms;
 

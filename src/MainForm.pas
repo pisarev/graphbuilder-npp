@@ -17,7 +17,8 @@ uses
   Windows, Messages, SysUtils, Classes, IniFiles, Graphics, Controls, Forms, Dialogs,
   ActnList, ActnMan, StdCtrls, Buttons, Grids, ExtCtrls, ComCtrls, Contnrs, HTTPProd,
   SHDocVw, XPStyleActnCtrls, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms,
-  NotepadPP.Docking, BlobManager, FastList, CrossGraph.Types, CrossGraph.Engine, CrossGraph;
+  NotepadPP.Docking, BlobManager, FastList, CrossGraph.Types, CrossGraph.Engine,
+  CrossGraph;
 
 const
   FormulaSGCode = MaxWord;
