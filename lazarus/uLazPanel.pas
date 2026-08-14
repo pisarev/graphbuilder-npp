@@ -76,6 +76,13 @@ type
     procedure LoadState(const Text: string);
     procedure WMMove(var aMessage: TWMMove); message WM_MOVE;
     procedure WMSize(var aMessage: TWMSize); message WM_SIZE;
+  protected
+    procedure CreateWnd; override;
+    procedure DockDocked(Sender: TObject);
+    procedure DockFloated(Sender: TObject);
+    procedure DockDropped(Sender: TObject);
+    procedure DockSwitchIn(Sender: TObject);
+    procedure DockSwitchOff(Sender: TObject);
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     procedure SetTheme(const Dark: Boolean);
@@ -136,6 +143,37 @@ begin
   Result := IncludeTrailingPathDelimiter(ExtractFilePath(string(PWideChar(@Buffer[0])))) + 'ui\index.html';
 end;
 
+procedure TLazPanel.CreateWnd;
+begin
+  inherited;
+  LogStep('panel window created, handle ' + IntToStr(PtrUInt(Handle)));
+end;
+
+procedure TLazPanel.DockDocked(Sender: TObject);
+begin
+  LogStep('docking: DMN_DOCK, the panel is in the dock');
+end;
+
+procedure TLazPanel.DockFloated(Sender: TObject);
+begin
+  LogStep('docking: DMN_FLOAT, the panel is floating');
+end;
+
+procedure TLazPanel.DockDropped(Sender: TObject);
+begin
+  LogStep('docking: the window was dropped after dragging, handle ' + IntToStr(PtrUInt(Handle)));
+end;
+
+procedure TLazPanel.DockSwitchIn(Sender: TObject);
+begin
+  LogStep('docking: the panel is shown on its own tab');
+end;
+
+procedure TLazPanel.DockSwitchOff(Sender: TObject);
+begin
+  LogStep('docking: the panel moved to a hidden tab');
+end;
+
 constructor TLazPanel.Create(NppParent: TNppPlugin; DlgId: Integer);
 begin
   inherited Create(NppParent, DlgId);
@@ -143,6 +181,11 @@ begin
   Width := 900;
   Height := 600;
   OnShow := Shown;
+  OnDock := DockDocked;
+  OnFloat := DockFloated;
+  OnFloatDropped := DockDropped;
+  OnSwitchIn := DockSwitchIn;
+  OnSwitchOff := DockSwitchOff;
   FKeepRatio := DefaultKeepRatio;
   FPenColor := DefaultPenColor;
   FGraph := TGraph.Create(Self);
@@ -150,6 +193,7 @@ begin
   FGraph.SetBounds(0, 0, ClientWidth, ClientHeight);
   FGraph.HandleNeeded;
   FGraph.Silent := True;
+  FGraph.Visible := False;
   FGraph.OnOverlap := GraphOverlap;
   FGraph.OnExtreme := GraphExtreme;
   FHost := TWVWindowParent.Create(Self);

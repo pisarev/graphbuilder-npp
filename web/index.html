@@ -231,8 +231,12 @@ canvas { display: block; width: 100%; height: 100%; }
 .zoom { left: 12px; bottom: 12px; display: grid; padding: 3px; gap: 2px; }
 
 .dock {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 7px 12px; background: var(--panel); border-top: 1px solid var(--line);
+}
+.dock .statusbar {
+  flex: 1 1 120px; min-width: 120px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .marks { display: flex; gap: 3px; }
 .marks button {
@@ -1417,8 +1421,11 @@ function size() {
 
   if (r.width < 2 || r.height < 2) { setTimeout(size, 16); return; }
   const d = window.devicePixelRatio || 1;
-  canvas.width = Math.round(r.width * d);
-  canvas.height = Math.round(r.height * d);
+  const w = Math.round(r.width * d);
+  const h = Math.round(r.height * d);
+  if (w === canvas.width && h === canvas.height) return;
+  canvas.width = w;
+  canvas.height = h;
   ctx.setTransform(d, 0, 0, d, 0, 0);
   
   if (opt.keepRatio)
@@ -2023,7 +2030,12 @@ if (window.ResizeObserver) {
   new ResizeObserver(() => {
     const r = canvas.parentElement.getBoundingClientRect();
     if (Math.abs(r.width - canvas.width / (window.devicePixelRatio || 1)) < 2 &&
-        Math.abs(r.height - canvas.height / (window.devicePixelRatio || 1)) < 2) return;
+        Math.abs(r.height - canvas.height / (window.devicePixelRatio || 1)) < 2)
+    {
+      clearTimeout(roTimer);
+      roTimer = 0;
+      return;
+    }
     clearTimeout(roTimer);
     roTimer = setTimeout(size, 60);
   }).observe(el("stage"));

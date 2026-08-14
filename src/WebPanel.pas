@@ -53,6 +53,7 @@ type
     procedure GraphExtreme(Sender: TObject);
     procedure Apply(const Root: TJSONObject);
     procedure Rebuild;
+    procedure HideBelow;
     function BookmarkSlot(const Slot: Integer; const Mode: string): string;
   protected
     function Curves: string;
@@ -181,6 +182,14 @@ begin
   Result := True;
 end;
 
+procedure TWebPanel.HideBelow;
+var
+  I: Integer;
+begin
+  for I := 0 to FHost.ControlCount - 1 do
+    if FHost.Controls[I] <> FBrowser then FHost.Controls[I].Visible := False;
+end;
+
 procedure TWebPanel.WebCreated(Sender: TCustomEdgeBrowser; AResult: HRESULT);
 begin
   if AResult <> S_OK then
@@ -191,6 +200,7 @@ begin
     Exit;
   end;
   FReady := True;
+  HideBelow;
   FGraph.Silent := True;
   FNextOverlap := FGraph.OnOverlap;
   FNextExtreme := FGraph.OnExtreme;

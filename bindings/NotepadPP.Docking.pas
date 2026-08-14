@@ -34,13 +34,23 @@ type
     FToolbarData: TToolbarData;
     FOnDock: TNotifyEvent;
     FOnFloat: TNotifyEvent;
+    FOnFloatDropped: TNotifyEvent;
+    FOnSwitchIn: TNotifyEvent;
+    FOnSwitchOff: TNotifyEvent;
+    FSwitchedOff: Boolean;
+    FRegistered: Boolean;
     procedure AdjustForDpi;
     procedure ClearControlParent(const Control: TControl);
     procedure WMNotify(var Message: TNppNotify); message WM_NOTIFY;
   protected
+    procedure CreateWnd; override;
     property NppDefaultDockingMask: Cardinal read FDockingMask write FDockingMask;
     property OnDock: TNotifyEvent read FOnDock write FOnDock;
     property OnFloat: TNotifyEvent read FOnFloat write FOnFloat;
+    property OnFloatDropped: TNotifyEvent read FOnFloatDropped write FOnFloatDropped;
+    property OnSwitchIn: TNotifyEvent read FOnSwitchIn write FOnSwitchIn;
+    property OnSwitchOff: TNotifyEvent read FOnSwitchOff write FOnSwitchOff;
+    property SwitchedOff: Boolean read FSwitchedOff;
   public
     constructor Create(NppParent: TNppPlugin); overload; override;
     constructor Create(AOwner: TNppForm); overload; override;
@@ -189,6 +199,13 @@ begin
   end;
   Visible := True;
   Npp.SendNpp(NPPM_DMMREGASDCKDLG, 0, LPARAM(@FToolbarData));
+  FRegistered := True;
+end;
+
+procedure TNppDockingForm.CreateWnd;
+begin
+  inherited;
+  if FRegistered and Assigned(Npp) then RegisterDockingForm(FDockingMask);
 end;
 
 procedure TNppDockingForm.UpdateDisplayInfo;
@@ -257,6 +274,17 @@ begin
     DMN_CLOSE: DoHide;
     DMN_DOCK: if Assigned(FOnDock) then FOnDock(Self);
     DMN_FLOAT: if Assigned(FOnFloat) then FOnFloat(Self);
+    DMN_FLOATDROPPED: if Assigned(FOnFloatDropped) then FOnFloatDropped(Self);
+    DMN_SWITCHIN:
+      begin
+        FSwitchedOff := False;
+        if Assigned(FOnSwitchIn) then FOnSwitchIn(Self);
+      end;
+    DMN_SWITCHOFF:
+      begin
+        FSwitchedOff := True;
+        if Assigned(FOnSwitchOff) then FOnSwitchOff(Self);
+      end;
   end;
   inherited;
 end;
