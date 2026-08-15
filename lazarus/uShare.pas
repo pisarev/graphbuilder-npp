@@ -5,6 +5,7 @@
 { Copyright © 2026 Yuriy Pisarev (ypisareff@outlook.com)                     }
 {                                                                            }
 { ************************************************************************** }
+
 unit uShare;
 
 {$MODE Delphi}
@@ -39,13 +40,18 @@ begin
       '-': Code[I] := '+';
       '_': Code[I] := '/';
     end;
-
   while Length(Code) mod 4 <> 0 do Code := Code + '=';
   try
     Result := DecodeStringBase64(Code);
   except
     Result := '';
   end;
+  if Result <> '' then
+    try
+      with GetJSON(Result) do Free;
+    except
+      Result := '';
+    end;
 end;
 
 procedure DropEditor(const Data: TJSONData);

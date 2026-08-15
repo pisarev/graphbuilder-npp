@@ -70,6 +70,7 @@ type
     procedure Reload(const Kind: TThemeKind);
     function Command(const Text: string): string;
     procedure Post(const Text: string);
+    function ClipboardText(const Value: string): string;
     procedure RefreshFromGraph;
     function Bookmarks: string;
     property Browser: TEdgeBrowser read FBrowser;
@@ -86,7 +87,7 @@ function UiFile: string;
 
 implementation
 
-uses Vcl.ActnList, ReportFacts;
+uses Vcl.ActnList, Vcl.Clipbrd, ReportFacts, Share;
 
 const
   DoneCheck = 40;
@@ -220,6 +221,20 @@ begin
   if not FileAge(UiFile, Stamp) then Stamp := 0;
   FBrowser.Navigate('file:///' + StringReplace(UiFile, '\', '/',
     [rfReplaceAll]) + '?theme=' + Suffix[Kind] + '&v=' + IntToStr(Round(Stamp * SecsPerDay)));
+end;
+
+function TWebPanel.ClipboardText(const Value: string): string;
+var
+  Item: TJSONObject;
+begin
+  Item := TJSONObject.Create;
+  try
+    Item.AddPair('type', 'clipboard');
+    Item.AddPair('text', Value);
+    Result := Item.ToJSON;
+  finally
+    Item.Free;
+  end;
 end;
 
 procedure TWebPanel.Post(const Text: string);
@@ -711,6 +726,7 @@ var
   Item: TJSONObject;
   I, Width, Height: Integer;
   Formula: string;
+  Pasted: string;
 begin
   Result := '';
   Root := TJSONObject.ParseJSONValue(Text) as TJSONObject;
@@ -771,8 +787,17 @@ begin
     end;
     if Value.Value = 'paste' then
     begin
-      if Assigned(FindAction(FHost, 'GPaste')) then FindAction(FHost, 'GPaste').Execute;
-      Post(Snapshot);
+      Pasted := Clipboard.AsText;
+      case ClipboardKind(Pasted) of
+        ckShare, ckState:
+          begin
+            if Assigned(FindAction(FHost, 'GPaste')) then FindAction(FHost, 'GPaste').Execute;
+            Post(Snapshot);
+          end;
+        ckBroken:;
+      else
+        Post(ClipboardText(Pasted));
+      end;
       Exit;
     end;
     if Value.Value = 'signfont' then
