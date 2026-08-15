@@ -58,6 +58,8 @@ uses
   Glyphs;
 
 type
+  TFormAccess = class(TCustomForm);
+
   TTone = Cardinal;
 
   TThemeTones = record
@@ -428,7 +430,7 @@ function GlyphSize(const Form: TCustomForm): Integer;
 var
   Dpi: Integer;
 begin
-  Dpi := Form.PixelsPerInch;
+  Dpi := TFormAccess(Form).PixelsPerInch;
   if Dpi < 96 then Dpi := 96;
   Result := MulDiv(16, Dpi, 96);
 end;

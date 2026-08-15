@@ -63,11 +63,20 @@ compute with the same Pascal underneath.
 | sources | `src/` | `lazarus/` |
 | result | `out/GraphBuilder.dll` | `lazarus/bin/GraphBuilderLaz.dll` |
 | browser host | WebView2, through our own binding | WebView2, through WebView4Delphi |
-| needs | Delphi | Lazarus, FPC, and a WebView4Delphi checkout |
+| needs | Delphi 11 Alexandria or newer | Lazarus, FPC, and a WebView4Delphi checkout |
 
 **The binary attached to a release is the Lazarus one.** Both builds work; the
 FPC build is what ships because it is made with a free toolchain, so anyone can
 reproduce it without a Delphi licence.
+
+The Delphi build wants **11 Alexandria or newer**, and that floor is not ours to
+move: it reaches WebView2 through `Winapi.WebView2`, which Embarcadero began
+shipping in the RTL with 11. On 10.2, 10.3 and 10.4 the unit is simply absent.
+Nothing else here stands in the way - before a release all thirteen units are
+compiled one at a time on six installations, and from 11 upwards every one of
+them builds. The two libraries this plugin sits on, the parser and the plotting
+engine, go back further, to 10.2 Tokyo; the plugin does not, and the difference
+is that one missing unit.
 
 WebView4Delphi is not vendored here - it is a third-party library under its own
 licence. Point `WEBVIEW4DELPHI` at a checkout of it before building the Lazarus

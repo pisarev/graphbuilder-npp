@@ -860,7 +860,7 @@ var
   A, B: Extended;
   List: TStringList;
   I, J: Integer;
-  SArray: TStringDynArray;
+  SArray: TArray<string>;
   Config: TConfig;
 begin
   Clear;
