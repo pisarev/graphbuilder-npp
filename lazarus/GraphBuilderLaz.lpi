@@ -20,11 +20,11 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="1"/>
       <MinorVersionNr Value="2"/>
-      <RevisionNr Value="0"/>
+      <RevisionNr Value="1"/>
       <BuildNr Value="0"/>
       <Language Value="0409"/>
       <CharSet Value="04B0"/>
-      <StringTable CompanyName="Yuriy Pisarev" FileDescription="GraphBuilder: function plotting panel for Notepad++" InternalName="GraphBuilderLaz" LegalCopyright="Copyright (c) 2026 Yuriy Pisarev. MIT licence" OriginalFilename="GraphBuilderLaz.dll" ProductName="GraphBuilder" ProductVersion="1.2.0.0" FileVersion="1.2.0.0"/>
+      <StringTable CompanyName="Yuriy Pisarev" FileDescription="GraphBuilder: function plotting panel for Notepad++" InternalName="GraphBuilderLaz" LegalCopyright="Copyright (c) 2026 Yuriy Pisarev. MIT licence" OriginalFilename="GraphBuilderLaz.dll" ProductName="GraphBuilder" ProductVersion="1.2.1.0" FileVersion="1.2.1.0"/>
     </VersionInfo>
     <BuildModes>
       <Item Name="Default" Default="True"/>

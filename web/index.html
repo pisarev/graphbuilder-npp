@@ -142,6 +142,14 @@ button { border: 0; background: none; cursor: pointer; }
 .primary:hover { filter: brightness(1.06); }
 .primary:active { transform: translateY(1px); }
 .primary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+/*
+  The build button carries its icon alone. Padding meant for a word beside it
+  would leave the button stretched, so it becomes a square.
+
+  In a docked panel this also takes pressure off the width of the row, and a row
+  that wraps is what used to make the panel rebuild itself.
+*/
+.primary.mark-only { width: 34px; padding: 0; gap: 0; justify-content: center; }
 
 .sep { width: 1px; height: 22px; background: var(--line); }
 
@@ -386,10 +394,9 @@ select.num { text-align: left; width: 108px; }
       <div class="hist" id="hist"></div>
     </div>
 
-    <button class="primary" id="draw">
+    <button class="primary mark-only" id="draw" title="Build" aria-label="Build">
       
       <svg viewBox="0 0 24 24"><path d="M3 12c3.24-6 5.76-6 9 0s5.76 6 9 0"/></svg>
-      Build
     </button>
 
     <div class="sep"></div>
