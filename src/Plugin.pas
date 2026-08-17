@@ -25,12 +25,16 @@ type
     FTextThread: TSearchThread;
     FLineThread: TSearchThread;
     FWeb: TWebPanel;
+    FShown: string;
   protected
     procedure WindowMethod(var Message: TMessage); virtual;
+    procedure ShowLater; virtual;
+    procedure ShowSelection; virtual;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Start; virtual;
+    procedure AdoptSelection; virtual;
     procedure BeNotified(sn: PSciNotification); override;
     procedure DoNppnToolbarModification; override;
     procedure DoNppnDarkModeChanged; override;
@@ -81,6 +85,7 @@ var
   Npp: TPlugin;
 
 procedure Start; cdecl;
+procedure AdoptSelection; cdecl;
 
 implementation
 
@@ -91,13 +96,45 @@ uses
 type
   TMainAccess = class(TMain);
 
+const
+  PreviewDelay = 250;
+  PreviewTimerId = 1;
+  PanelMenuIndex = 0;
+  LengthLimit = 200;
+
 var
   PlusFlag: Boolean = False;
   Hook: HHOOK;
 
+procedure Sift(const Source: string; const Good: TStrings);
+var
+  Lines: TStringList;
+  I: Integer;
+  Text: string;
+begin
+  if not Assigned(Good) then Exit;
+  Lines := TStringList.Create;
+  try
+    Lines.Text := Source;
+    for I := 0 to Lines.Count - 1 do
+    begin
+      Text := Trim(Lines[I]);
+      if (Text = '') or (Length(Text) > LengthLimit) then Continue;
+      if Good.IndexOf(Text) < 0 then Good.Add(Text);
+    end;
+  finally
+    Lines.Free;
+  end;
+end;
+
 procedure Start;
 begin
   Npp.Start;
+end;
+
+procedure AdoptSelection;
+begin
+  Npp.AdoptSelection;
 end;
 
 function Focused(const Target: TWinControl): TWinControl;
@@ -137,78 +174,79 @@ begin
     Result := CallNextHookEx(Hook, Code, wParam, lParam)
   else begin
     Control := Focused(Main);
-    if Assigned(Main) and Assigned(Control) and (Code = HC_ACTION) and (lParam and $40000000 = 0) then
-    begin
-      lParam := NativeInt(Control);
-      case wParam of
-        VK_TAB:
-          begin
-            wParam := Ord((GetKeyState(VK_CONTROL) and $80) = 0);
-            Message := M_TAB;
-          end;
-        Ord('A'):
-          if CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_SELECT_ALL
-          else
-            Message := 0;
-        VK_RETURN:
-          if Control = Main.bFormula then
-            Message := M_DRAW
-          else
-            Message := 0;
-        VK_F5: Message := M_REFRESH;
-        Ord('C'):
-          if (Control = Main.Graph) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_COPY
-          else
-            Message := 0;
-        Ord('V'):
-          if (Control = Main.Graph) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_PASTE
-          else
-            Message := 0;
-        VK_DELETE:
-          if (Control = Main.Graph) and ((GetKeyState(VK_SHIFT) and $80) <> 0) then
-            Message := M_COPY_AND_DELETE
-          else
-            Message := 0;
-        VK_INSERT:
-          if (Control = Main.Graph) and ((GetKeyState(VK_SHIFT) and $80) <> 0) then
-            Message := M_PASTE
-          else
-            Message := 0;
-        VK_DOWN:
-          if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_BHIDE
-          else
-            Message := 0;
-        VK_UP:
-          if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_BSHOW
-          else
-            Message := 0;
-        VK_LEFT:
-          if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_LHIDE
-          else
-            Message := 0;
-        VK_RIGHT:
-          if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
-            Message := M_LSHOW
-          else
-            Message := 0;
+    if Assigned(Main) and Assigned(Control) and (Code = HC_ACTION) and (lParam and
+      $40000000 = 0) then
+      begin
+        lParam := NativeInt(Control);
+        case wParam of
+          VK_TAB:
+            begin
+              wParam := Ord((GetKeyState(VK_CONTROL) and $80) = 0);
+              Message := M_TAB;
+            end;
+          Ord('A'):
+            if CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_SELECT_ALL
+            else
+              Message := 0;
+          VK_RETURN:
+            if Control = Main.bFormula then
+              Message := M_DRAW
+            else
+              Message := 0;
+          VK_F5: Message := M_REFRESH;
+          Ord('C'):
+            if (Control = Main.Graph) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_COPY
+            else
+              Message := 0;
+          Ord('V'):
+            if (Control = Main.Graph) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_PASTE
+            else
+              Message := 0;
+          VK_DELETE:
+            if (Control = Main.Graph) and ((GetKeyState(VK_SHIFT) and $80) <> 0) then
+              Message := M_COPY_AND_DELETE
+            else
+              Message := 0;
+          VK_INSERT:
+            if (Control = Main.Graph) and ((GetKeyState(VK_SHIFT) and $80) <> 0) then
+              Message := M_PASTE
+            else
+              Message := 0;
+          VK_DOWN:
+            if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_BHIDE
+            else
+              Message := 0;
+          VK_UP:
+            if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_BSHOW
+            else
+              Message := 0;
+          VK_LEFT:
+            if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_LHIDE
+            else
+              Message := 0;
+          VK_RIGHT:
+            if not CheckControl(Control) and ((GetKeyState(VK_CONTROL) and $80) <> 0) then
+              Message := M_LSHOW
+            else
+              Message := 0;
+        else
+          Message := 0;
+        end;
+        if Message = 0 then
+          Result := CallNextHookEx(Hook, Code, wParam, lParam)
+        else begin
+          PostMessage(Npp.Handle, Message, wParam, lParam);
+          Result := 1;
+        end;
+      end
       else
-        Message := 0;
-      end;
-      if Message = 0 then
-        Result := CallNextHookEx(Hook, Code, wParam, lParam)
-      else begin
-        PostMessage(Npp.Handle, Message, wParam, lParam);
-        Result := 1;
-      end;
-    end
-    else
-      Result := CallNextHookEx(Hook, Code, wParam, lParam);
+        Result := CallNextHookEx(Hook, Code, wParam, lParam);
   end;
 end;
 
@@ -218,7 +256,6 @@ var
   I, J, Size: Integer;
   S: string;
   B: UTF8String;
-
 begin
   inherited;
   case sn.nmhdr.code of
@@ -271,6 +308,7 @@ begin
           FLineThread.Source := S;
           FLineThread.Script := nil;
           FLineThread.Start;
+          ShowLater;
         end;
       end;
   end;
@@ -280,6 +318,7 @@ constructor TPlugin.Create;
 const
   GB = 'Graph Builder';
   G = 'G';
+  AdoptItemCaption = 'Plot the selection';
 var
   SK: TShortcutKey;
 begin
@@ -292,10 +331,58 @@ begin
   SK.IsAlt := True;
   SK.Key := G;
   AddFuncItem(GB, Plugin.Start, SK);
+  FillChar(SK, SizeOf(TShortcutKey), 0);
+  SK.IsAlt := True;
+  SK.IsShift := True;
+  SK.Key := G;
+  AddFuncItem(AdoptItemCaption, Plugin.AdoptSelection, SK);
+end;
+
+procedure TPlugin.AdoptSelection;
+var
+  Good: TStringList;
+begin
+  if not Assigned(FWeb) then
+  begin
+    Start;
+    if not Assigned(FWeb) then Exit;
+  end;
+  Good := TStringList.Create;
+  try
+    Sift(SelectedText, Good);
+    FWeb.Adopt(Good, SelectedText);
+    FShown := SelectedText;
+  finally
+    Good.Free;
+  end;
+end;
+
+procedure TPlugin.ShowLater;
+begin
+  if FHandle <> 0 then SetTimer(FHandle, PreviewTimerId, PreviewDelay, nil);
+end;
+
+procedure TPlugin.ShowSelection;
+var
+  Good: TStringList;
+  Selection: string;
+begin
+  if not Assigned(FWeb) then Exit;
+  Selection := SelectedText;
+  if Selection = FShown then Exit;
+  FShown := Selection;
+  Good := TStringList.Create;
+  try
+    Sift(Selection, Good);
+    FWeb.Preview(Good, Selection);
+  finally
+    Good.Free;
+  end;
 end;
 
 destructor TPlugin.Destroy;
 begin
+  if FHandle <> 0 then KillTimer(FHandle, PreviewTimerId);
   FLineThread.Stop;
   FLineThread.Free;
   FTextThread.Stop;
@@ -313,7 +400,7 @@ procedure TPlugin.Start;
 begin
   if not Assigned(Main) then
   begin
-    Main := TMain.Create(Self, 1);
+    Main := TMain.Create(Self, PanelMenuIndex);
     FWeb := nil;
   end;
   Main.ApplyEditorTheme;
@@ -383,9 +470,8 @@ begin
     TMainAccess(Main).PageKeepRatio := FWeb.KeepRatio;
     TMainAccess(Main).PagePenColor := FWeb.PenColor;
     TMainAccess(Main).SaveState(Name, False);
-    Cell.Checked := True;
   end
-  else if (Mode = 'load') and Cell.Checked then
+  else if (Mode = 'load') and TMainAccess(Main).HasState(Name) then
   begin
     if TMainAccess(Main).LoadState(Name) then
     begin
@@ -394,8 +480,10 @@ begin
       FWeb.PenColor := TMainAccess(Main).PagePenColor;
       FWeb.RefreshFromGraph;
     end;
-    Cell.Checked := False;
-  end;
+  end
+  else if Mode = 'drop' then
+    TMainAccess(Main).DropState(Name);
+  Cell.Checked := TMainAccess(Main).HasState(Name);
   Result := FWeb.Bookmarks;
 end;
 
@@ -413,6 +501,12 @@ var
   Control: TWinControl;
 begin
   case Message.Msg of
+    WM_TIMER:
+      if Message.WParam = PreviewTimerId then
+      begin
+        KillTimer(FHandle, PreviewTimerId);
+        ShowSelection;
+      end;
     M_FORMULA:
       begin
         Thread := TSearchThread(Message.WParam);
@@ -422,7 +516,7 @@ begin
           if not Optimal(Thread.Script, stScript) and (Main.bFormula.Items.IndexOf(S) < 0) then
             Main.bFormula.Items.Add(S);
           Main.bFormula.Text := S;
-          if Assigned(FWeb) then FWeb.Suggest(S);
+          if Assigned(FWeb) and (Trim(SelectedText) = '') then FWeb.Suggest(S);
         end;
       end;
     M_TAB: Main.Next(TWinControl(Message.lParam), Boolean(Message.WParam));

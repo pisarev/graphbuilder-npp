@@ -84,8 +84,8 @@ begin
   FillChar(Brush, SizeOf(Brush), 0);
   Brush.lbStyle := BS_SOLID;
   Brush.lbColor := ColorToRGB(clBlack);
-  Pen := ExtCreatePen(PS_GEOMETRIC or PS_SOLID or PS_ENDCAP_ROUND or PS_JOIN_ROUND, Max(1, Round(Width * FScale)),
-    Brush, 0, nil);
+  Pen := ExtCreatePen(PS_GEOMETRIC or PS_SOLID or PS_ENDCAP_ROUND or PS_JOIN_ROUND,
+    Max(1, Round(Width * FScale)), Brush, 0, nil);
   SelectObject(FDC, Pen);
   if FPen <> 0 then DeleteObject(FPen);
   FPen := Pen;

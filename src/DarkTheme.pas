@@ -96,8 +96,8 @@ var
 begin
   First := ColorToRGB(A);
   Second := ColorToRGB(B);
-  Result := TColor(RGB(Part(GetRValue(First), GetRValue(Second)), Part(GetGValue(First), GetGValue(Second)),
-    Part(GetBValue(First), GetBValue(Second))));
+  Result := TColor(RGB(Part(GetRValue(First), GetRValue(Second)),
+    Part(GetGValue(First), GetGValue(Second)), Part(GetBValue(First), GetBValue(Second))));
 end;
 
 function Tone(const Value: TTone): TColor;
@@ -211,7 +211,8 @@ begin
     if Text <> '' then
     begin
       Width := Canvas.TextWidth(Text);
-    Label_ := TRect.Create(Place.Left + Inset - 3, Place.Top, Place.Left + Inset + Width + 3, Place.Top + Height);
+    Label_ := TRect.Create(Place.Left + Inset - 3, Place.Top, Place.Left + Inset + Width + 3,
+      Place.Top + Height);
       Canvas.Brush.Style := bsSolid;
       Canvas.Brush.Color := FColors.Panel;
       Canvas.FillRect(Label_);

@@ -280,6 +280,8 @@ type
     procedure SaveFormulaList; virtual;
     function LoadState(const AName: string): Boolean; virtual;
     procedure SaveState(const AName: string; const FL: Boolean; const CS: PCoordinateSystem = nil); virtual;
+    function HasState(const AName: string): Boolean; virtual;
+    procedure DropState(const AName: string); virtual;
     procedure BeginUpdate; virtual;
     procedure EndUpdate; virtual;
     property FormulaList: TFastList read FFormulaList write FFormulaList;
@@ -880,7 +882,8 @@ begin
   FGraph.Offset := PointD(A, B);
   FGraph.MaxX := AFile.ReadFloat(SizeSection, XIdent, FGraph.MaxX * 2) / 2;
   FGraph.MaxY := AFile.ReadFloat(SizeSection, YIdent, FGraph.MaxY * 2) / 2;
-  FGraph.PolarMaxAngle := DegToRad(AFile.ReadFloat(SizeSection, PolarMaxAngleIdent, RadToDeg(FGraph.PolarMaxAngle)));
+  FGraph.PolarMaxAngle := DegToRad(AFile.ReadFloat(SizeSection, PolarMaxAngleIdent,
+    RadToDeg(FGraph.PolarMaxAngle)));
   FGraph.ShowGrid := AFile.ReadBool(GraphSection, GridIdent, FGraph.ShowGrid);
   FGraph.ShowAxis := AFile.ReadBool(GraphSection, AxisIdent, FGraph.ShowAxis);
   FGraph.Tracing := AFile.ReadBool(GraphSection, TracingIdent, FGraph.Tracing);
@@ -891,7 +894,8 @@ begin
   FGraph.Antialias := AFile.ReadBool(LineSection, AntialiasIdent, FGraph.Antialias);
   FGraph.MultiColor := AFile.ReadBool(LineSection, MultiColorIdent, FGraph.MultiColor);
   FGraph.Autoquality := AFile.ReadBool(LineSection, AutoqualityIdent, FGraph.Autoquality);
-  FGraph.GraphPen.Color := StringToColor(AFile.ReadString(LineSection, ColorIdent, ColorToString(FGraph.GraphPen.Color)));
+  FGraph.GraphPen.Color := StringToColor(AFile.ReadString(LineSection, ColorIdent,
+    ColorToString(FGraph.GraphPen.Color)));
   FGraph.Accuracy := AFile.ReadInteger(LineSection, AccuracyIdent, FGraph.Accuracy);
   FGraph.Quality := AFile.ReadInteger(LineSection, QualityIdent, FGraph.Quality);
   FGraph.GraphPen.Width := AFile.ReadInteger(LineSection, PenWidthIdent, FGraph.GraphPen.Width);
@@ -902,10 +906,12 @@ begin
   FGraph.SignMargin := AFile.ReadInteger(SignSection, MarginIdent, FGraph.SignMargin);
   FGraph.SignFont.Name := AFile.ReadString(SignSection, FontNameIdent, FGraph.SignFont.Name);
   FGraph.SignFont.Charset := AFile.ReadInteger(SignSection, FontCharsetIdent, FGraph.SignFont.Charset);
-  FGraph.SignFont.Color := StringToColor(AFile.ReadString(SignSection, FontColorIdent, ColorToString(FGraph.SignFont.Color)));
+  FGraph.SignFont.Color := StringToColor(AFile.ReadString(SignSection, FontColorIdent,
+    ColorToString(FGraph.SignFont.Color)));
   FGraph.SignFont.Height := AFile.ReadInteger(SignSection, FontHeightIdent, FGraph.SignFont.Height);
   FGraph.SignFont.Size := AFile.ReadInteger(SignSection, FontSizeIdent, FGraph.SignFont.Size);
-  FGraph.SignFont.Style := TFontStyles(Byte(AFile.ReadInteger(SignSection, FontStyleIdent, Byte(FGraph.SignFont.Style))));
+  FGraph.SignFont.Style := TFontStyles(Byte(AFile.ReadInteger(SignSection, FontStyleIdent,
+    Byte(FGraph.SignFont.Style))));
   FGraph.HSpacing := AFile.ReadFloat(GridSection, HSpacingIdent, FGraph.HSpacing);
   FGraph.VSpacing := AFile.ReadFloat(GridSection, VSpacingIdent, FGraph.VSpacing);
   FGraph.ThreadWorkTime := AFile.ReadInteger(CalcSection, CalcTimeIdent, FGraph.ThreadWorkTime);
@@ -1105,7 +1111,8 @@ begin
     SaveFormulaList;
     for I := 0 to FFormulaList.Count - 1 do
       if TryStrToInt(FFormulaList.ValueFromIndex[I], J) then
-        AFile.WriteString(FLSection, Encode(FFormulaList.Names[I]), GetEnumName(TypeInfo(TCoordinateSystem), J));
+        AFile.WriteString(FLSection, Encode(FFormulaList.Names[I]),
+          GetEnumName(TypeInfo(TCoordinateSystem), J));
   end;
 end;
 
@@ -1125,7 +1132,6 @@ begin
     finally
       List.Free;
     end;
-    FManager.DeleteItem(I);
   end;
 end;
 
@@ -1213,6 +1219,20 @@ begin
   finally
     AFile.Free;
   end;
+end;
+
+function TMain.HasState(const AName: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := FManager.Find(AName, I);
+end;
+
+procedure TMain.DropState(const AName: string);
+var
+  I: Integer;
+begin
+  if FManager.Find(AName, I) then FManager.DeleteItem(I);
 end;
 
 procedure TMain.SaveState(const AName: string; const FL: Boolean; const CS: PCoordinateSystem);
@@ -1877,17 +1897,23 @@ end;
 procedure TMain.BookmarkExecute(Sender: TObject);
 var
   Action: TAction absolute Sender;
+  Busy, Drop, Over: Boolean;
 begin
-  if Action.Checked then
+  Busy := HasState(Action.Name);
+  Drop := GetKeyState(VK_SHIFT) < 0;
+  Over := GetKeyState(VK_CONTROL) < 0;
+  if Busy and Drop then
+    DropState(Action.Name)
+  else if Busy and not Over then
   begin
     gFormula.EditorMode := False;
     PC.ActivePage := pGraph;
     LoadState(Action.Name);
     Open;
   end
-  else
+  else if not (Drop and not Busy) then
     SaveState(Action.Name, False);
-  Action.Checked := not Action.Checked;
+  Action.Checked := HasState(Action.Name);
 end;
 
 procedure TMain.bFormulaKeyPress(Sender: TObject; var Key: Char);
@@ -1963,43 +1989,46 @@ procedure TMain.eMaxXChange(Sender: TObject);
 var
   Value: Extended;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eMaxX.Text, Value) and (Value > 0) then
-  begin
-    FGraph.MaxX := Value / 2;
-    FGraph.Build;
-  end;
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eMaxX.Text, Value) and
+    (Value > 0) then
+    begin
+      FGraph.MaxX := Value / 2;
+      FGraph.Build;
+    end;
 end;
 
 procedure TMain.eMaxYChange(Sender: TObject);
 var
   Value: Extended;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eMaxY.Text, Value) and (Value > 0) then
-  begin
-    FGraph.MaxY := Value / 2;
-    FGraph.Build;
-  end;
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eMaxY.Text, Value) and
+    (Value > 0) then
+    begin
+      FGraph.MaxY := Value / 2;
+      FGraph.Build;
+    end;
 end;
 
 procedure TMain.ePolarMaxAngleChange(Sender: TObject);
 var
   Value: Integer;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(ePolarMaxAngle.Text, Value) and (Value > 0) then
-  begin
-    if Value < 1 then
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(ePolarMaxAngle.Text, Value) and
+    (Value > 0) then
     begin
-      BeginUpdate;
-      try
-        Value := 1;
-        ePolarMaxAngle.Text := IntToStr(Value);
-      finally
-        EndUpdate;
+      if Value < 1 then
+      begin
+        BeginUpdate;
+        try
+          Value := 1;
+          ePolarMaxAngle.Text := IntToStr(Value);
+        finally
+          EndUpdate;
+        end;
       end;
+      FGraph.PolarMaxAngle := DegToRad(Value);
+      FGraph.Build;
     end;
-    FGraph.PolarMaxAngle := DegToRad(Value);
-    FGraph.Build;
-  end;
 end;
 
 procedure TMain.eAccuracyChange(Sender: TObject);
@@ -2071,62 +2100,66 @@ procedure TMain.eHSpacingChange(Sender: TObject);
 var
   Value: Extended;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eHSpacing.Text, Value) and (Value > 0) then
-  begin
-    FGraph.HSpacing := Value;
-    FGraph.Invalidate;
-  end;
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eHSpacing.Text, Value) and
+    (Value > 0) then
+    begin
+      FGraph.HSpacing := Value;
+      FGraph.Invalidate;
+    end;
 end;
 
 procedure TMain.eVSpacingChange(Sender: TObject);
 var
   Value: Extended;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eVSpacing.Text, Value) and (Value > 0) then
-  begin
-    FGraph.VSpacing := Value;
-    FGraph.Invalidate;
-  end;
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eVSpacing.Text, Value) and
+    (Value > 0) then
+    begin
+      FGraph.VSpacing := Value;
+      FGraph.Invalidate;
+    end;
 end;
 
 procedure TMain.eCalcTimeChange(Sender: TObject);
 var
   Value: Integer;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(eCalcTime.Text, Value) and (Value > 0) then
-  begin
-    if Value < 1 then
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(eCalcTime.Text, Value) and
+    (Value > 0) then
     begin
-      BeginUpdate;
-      try
-        Value := 1;
-        eCalcTime.Text := IntToStr(Value);
-      finally
-        EndUpdate;
+      if Value < 1 then
+      begin
+        BeginUpdate;
+        try
+          Value := 1;
+          eCalcTime.Text := IntToStr(Value);
+        finally
+          EndUpdate;
+        end;
       end;
+      FGraph.ThreadWorkTime := Value;
     end;
-    FGraph.ThreadWorkTime := Value;
-  end;
 end;
 
 procedure TMain.eOverlapMaxTimeChange(Sender: TObject);
 var
   Value: Integer;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(eOverlapMaxTime.Text, Value) and (Value > 0) then
-  begin
-    if Value < 0 then
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToInt(eOverlapMaxTime.Text, Value) and
+    (Value > 0) then
     begin
-      BeginUpdate;
-      try
-        Value := 0;
-        eOverlapMaxTime.Text := IntToStr(Value);
-      finally
-        EndUpdate;
+      if Value < 0 then
+      begin
+        BeginUpdate;
+        try
+          Value := 0;
+          eOverlapMaxTime.Text := IntToStr(Value);
+        finally
+          EndUpdate;
+        end;
       end;
+      FGraph.OverlapMaxTime := Value;
     end;
-    FGraph.OverlapMaxTime := Value;
-  end;
 end;
 
 procedure TMain.eOverlapMaxDepthChange(Sender: TObject);
@@ -2154,8 +2187,9 @@ procedure TMain.eZoomInFactorChange(Sender: TObject);
 var
   Value: Extended;
 begin
-  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eZoomInFactor.Text, Value) and (Value > 0) then
-    FGraph.ZoomInFactor := Value;
+  if Assigned(FGraph) and (FUpdateCount = 0) and TryStrToFloat(eZoomInFactor.Text, Value) and
+    (Value > 0) then
+      FGraph.ZoomInFactor := Value;
 end;
 
 procedure TMain.eZoomOutFactorChange(Sender: TObject);
@@ -2260,7 +2294,8 @@ begin
     List := TStringList.Create;
     try
       ReportFacts.SavePoints(FGraph, ChangeFileExt(FileName, PointsExt));
-      List.Text := ReportFacts.Extend(PP.Content, FGraph, Assigned(Npp) and Npp.DarkMode, ChangeFileExt(FileName, PointsExt));
+      List.Text := ReportFacts.Extend(PP.Content, FGraph, Assigned(Npp) and Npp.DarkMode,
+        ChangeFileExt(FileName, PointsExt));
       List.SaveToFile(FileName, TEncoding.UTF8);
     finally
       List.Free;
@@ -2520,7 +2555,8 @@ begin
             begin
               Overlap := FGraph.OverlapArray[J];
               if ((Overlap.AFormula = I) or (Overlap.BFormula = I)) and
-                FGraph.Formula.Active[Overlap.AFormula] and FGraph.Formula.Active[Overlap.BFormula] then
+                FGraph.Formula.Active[Overlap.AFormula] and
+                FGraph.Formula.Active[Overlap.BFormula] then
                 begin
                   X := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), Overlap.Point.X);
                   Y := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), Overlap.Point.Y);
@@ -2615,10 +2651,12 @@ begin
     end
   else
     if TextUtils.SameText(Trim(TagString), VaryRadiusTag) then
-      ReplaceText := Format(VaryTemplate, [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVaryRadius)])
+      ReplaceText := Format(VaryTemplate,
+        [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVaryRadius)])
   else
     if TextUtils.SameText(Trim(TagString), VoidRadiusTag) then
-      ReplaceText := Format(VoidTemplate, [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVoidRadius)])
+      ReplaceText := Format(VoidTemplate,
+        [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVoidRadius)])
   else
     if TextUtils.SameText(Trim(TagString), ExtremeTag) then
     begin

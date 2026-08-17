@@ -434,7 +434,10 @@ begin
       Ink := Readable(TColor(Data.Color), Dark);
     end;
     Result := Result + Format(
-      '<div class="fn"><div class="fn-head">' + '<span class="fn-dot" style="background:%s"></span>' + '<span class="fn-name" style="color:%s">%s</span></div>' + '<div class="kv">%s</div></div>',
+      '<div class="fn"><div class="fn-head">' +
+      '<span class="fn-dot" style="background:%s"></span>' +
+      '<span class="fn-name" style="color:%s">%s</span></div>' +
+      '<div class="kv">%s</div></div>',
       [
         Colour,
         Ink,
@@ -495,8 +498,9 @@ var
 
   function Turn(const Angle: Extended): string;
   begin
-    Result := FormatFloat(Graph.FloatFormat(Graph.AngleFormat), RadToDeg(Angle)) + '&deg; <span class="k">(' +
-      FormatFloat(Graph.FloatFormat(Graph.AngleFormat), Angle) + ' rad)</span>';
+    Result := FormatFloat(Graph.FloatFormat(Graph.AngleFormat), RadToDeg(Angle)) +
+      '&deg; <span class="k">(' + FormatFloat(Graph.FloatFormat(Graph.AngleFormat), Angle) +
+      ' rad)</span>';
   end;
 
   function Tint(const Index: Integer; const ForText: Boolean): string;
@@ -515,7 +519,8 @@ var
   function Named(const Index: Integer): string;
   begin
     Result := Format(
-      '<span class="pair"><span class="fn-dot" style="background:%s">' + '</span><span class="mono" style="color:%s">%s</span></span>',
+      '<span class="pair"><span class="fn-dot" style="background:%s">' +
+      '</span><span class="mono" style="color:%s">%s</span></span>',
       [
         Tint(
           Index,
@@ -580,7 +585,8 @@ begin
     Head('The window');
     Text.Append('<div class="kv">');
     Text.Append(TextRow('Centre', 'X: ' + XY(-Graph.Offset.X, False) + ', Y: ' + XY(-Graph.Offset.Y, True)));
-    Text.Append(TextRow('Size', 'across ' + XY(Graph.MaxX * 2, False) + ', down ' + XY(Graph.MaxY * 2, True)));
+    Text.Append(TextRow('Size',
+      'across ' + XY(Graph.MaxX * 2, False) + ', down ' + XY(Graph.MaxY * 2, True)));
     Text.Append('</div>');
     Head('Formulas');
     Text.Append('<div class="chips">');
@@ -592,7 +598,8 @@ begin
     begin
       Head('Intersections');
       Had := False;
-      Text.Append('<table class="pts"><tr><th>Point</th><th>X</th><th>Y</th>' + '<th>From the centre</th><th>Curves</th></tr>');
+      Text.Append('<table class="pts"><tr><th>Point</th><th>X</th><th>Y</th>' +
+        '<th>From the centre</th><th>Curves</th></tr>');
       for J := Low(Graph.OverlapArray) to High(Graph.OverlapArray) do
       begin
         Overlap := Graph.OverlapArray[J];
@@ -642,7 +649,8 @@ begin
     begin
       Head('Extrema');
       Had := False;
-      Text.Append('<table class="pts"><tr><th>Kind</th><th>X</th><th>Y</th>' + '<th>From the centre</th>' + Pick(Graph.CS = csRectangular,
+      Text.Append('<table class="pts"><tr><th>Kind</th><th>X</th><th>Y</th>' +
+        '<th>From the centre</th>' + Pick(Graph.CS = csRectangular,
         '', '<th>Angle</th>') + '</tr>');
       for I := 0 to 1 do
       begin
@@ -691,17 +699,18 @@ const
   Dim = '--r-ink:#e6e9ee;--r-dim:#a7b0bb;--r-faint:#7d8792;--r-line:#333941;' +
     '--r-soft:#23272d;--r-card:#1c2024;--r-up:#4fd1a5;--r-down:#ff8a80;';
 begin
-  Result := '<style>' + '.rep{' + 'color:var(--ink,var(--r-ink));' +
+  Result := '<style>.rep{color:var(--ink,var(--r-ink));' +
     'font:13px/1.55 "Segoe UI",system-ui,sans-serif;' + Pick(Dark, Dim, Light) + '}' +
     '.rep h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;' +
     'color:var(--ink-faint,var(--r-faint));margin:0 0 14px;padding-bottom:8px;' +
     'border-bottom:1px solid var(--line,var(--r-line))}' +
     '.rep h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;' +
-    'color:var(--ink-faint,var(--r-faint));margin:22px 0 9px}' + '.rep section{margin:0 0 26px}' +
+    'color:var(--ink-faint,var(--r-faint));margin:22px 0 9px}.rep section{margin:0 0 26px}' +
     '.rep .fn{border:1px solid var(--line,var(--r-line));border-radius:10px;' +
     'background:var(--panel,var(--r-card));margin:0 0 12px;overflow:hidden}' +
     '.rep .fn-head{display:flex;align-items:center;gap:9px;padding:10px 14px;' +
-    'border-bottom:1px solid var(--line,var(--r-line));' + 'background:var(--line-soft,var(--r-soft))}' +
+    'border-bottom:1px solid var(--line,var(--r-line));' +
+    'background:var(--line-soft,var(--r-soft))}' +
     '.rep .fn-dot{width:10px;height:10px;border-radius:50%;flex:none;' +
     'box-shadow:0 0 0 1px rgba(128,128,128,.5)}' +
     '.rep .fn-name{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace;' +
@@ -710,13 +719,15 @@ begin
     'background:var(--line,var(--r-line))}' +
     '.rep .kv>div{background:var(--panel,var(--r-card));padding:9px 14px}' +
     '.rep .kv .k{color:var(--ink-dim,var(--r-dim));font-size:12px}' +
-    '.rep .kv .v{font-variant-numeric:tabular-nums}' + '.rep .chips{display:flex;flex-wrap:wrap;gap:5px}' +
+    '.rep .kv .v{font-variant-numeric:tabular-nums}' +
+    '.rep .chips{display:flex;flex-wrap:wrap;gap:5px}' +
     '.rep .chip{display:inline-flex;align-items:center;gap:5px;' +
     'padding:2px 8px;border-radius:6px;background:var(--line-soft,var(--r-soft));' +
     'border:1px solid var(--line,var(--r-line));' +
     'font-family:"Cascadia Mono",Consolas,ui-monospace,monospace;font-size:11.5px;' +
     'font-variant-numeric:tabular-nums;white-space:nowrap}' +
-    '.rep .up{color:var(--r-up)}.rep .down{color:var(--r-down)}' + '.rep .arr{font-size:12px;line-height:1}' +
+    '.rep .up{color:var(--r-up)}.rep .down{color:var(--r-down)}' +
+    '.rep .arr{font-size:12px;line-height:1}' +
     '.rep .tiles{display:flex;flex-wrap:wrap;gap:8px}' +
     '.rep .tile{flex:1 1 132px;border:1px solid var(--line,var(--r-line));border-radius:9px;' +
     'background:var(--panel,var(--r-card));padding:10px 13px}' +
@@ -733,9 +744,10 @@ begin
     '.rep .nm{display:inline-flex;align-items:center;justify-content:center;' +
     'min-width:20px;height:20px;padding:0 5px;border-radius:5px;' +
     'background:var(--accent-soft,rgba(47,111,235,.10));color:var(--accent,#2f6feb);' +
-    'font-size:11px;font-weight:600}' + '.rep .pair{display:flex;align-items:center;gap:6px;margin:2px 0}' +
+    'font-size:11px;font-weight:600}' +
+    '.rep .pair{display:flex;align-items:center;gap:6px;margin:2px 0}' +
     '.rep .note{color:var(--ink-faint,var(--r-faint));font-size:11.5px;margin:10px 0 0}' +
-    '.rep .mono{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace}' + '</style>';
+    '.rep .mono{font-family:"Cascadia Mono",Consolas,ui-monospace,monospace}</style>';
 end;
 
 function Cell(const Text: string): string;
@@ -840,7 +852,8 @@ begin
   ScaleY := (Height - 2 * Pad) / SpanY;
   Stride := 1;
   if Total > Limit then Stride := (Total div Limit) + 1;
-  Result := Format('<svg viewBox="0 0 %d %d" xmlns="http://www.w3.org/2000/svg" ' + 'width="%d" height="%d">',
+  Result := Format('<svg viewBox="0 0 %d %d" xmlns="http://www.w3.org/2000/svg" ' +
+    'width="%d" height="%d">',
     [Width, Height, Width, Height]);
   for I := 0 to Graph.Formula.Count - 1 do
   begin
@@ -874,7 +887,8 @@ begin
     end;
     if Path = '' then Continue;
     Result := Result +
-      Format('<path d="%s" fill="none" stroke="%s" stroke-width="1.6" ' + 'stroke-linejoin="round" stroke-linecap="round"/>',
+      Format('<path d="%s" fill="none" stroke="%s" stroke-width="1.6" ' +
+      'stroke-linejoin="round" stroke-linecap="round"/>',
       [Path, Colour]);
   end;
   Result := Result + '</svg>';
@@ -1021,8 +1035,8 @@ begin
     Result := StringReplace(Result, '<head>', '<head>' + Charset, [rfIgnoreCase]);
   Result := StringReplace(Result, '</head>', Style(Dark) + '</head>', [rfIgnoreCase]);
   if Pos('<body></body>', StringReplace(LowerCase(Result), ' ', '', [rfReplaceAll])) > 0 then
-    Result := StringReplace(Result, '</body>', '<div class="rep">' + Body(Graph, Dark) + '</div></body>',
-      [rfIgnoreCase]);
+    Result := StringReplace(Result, '</body>',
+      '<div class="rep">' + Body(Graph, Dark) + '</div></body>', [rfIgnoreCase]);
   Block := Facts(Graph, Dark);
   if (Block = '') and Assigned(Graph) and (Graph.CS <> csRectangular) then
     Block := '<section class="factbox"><h2>Facts about the functions</h2><p class="note">' +
@@ -1030,7 +1044,8 @@ begin
       'so they are not computed in polar coordinates.</p></section>';
   if PointsFile <> '' then
   begin
-    Link := Format('<p class="note">Curve points: <a href="%s">%s</a></p>', [ExtractFileName(PointsFile), ExtractFileName(PointsFile)]);
+    Link := Format('<p class="note">Curve points: <a href="%s">%s</a></p>',
+      [ExtractFileName(PointsFile), ExtractFileName(PointsFile)]);
     Block := StringReplace(Block, '</section>', Link + '</section>', []);
   end;
   if Block <> '' then Block := '<div class="rep">' + Block + '</div>';

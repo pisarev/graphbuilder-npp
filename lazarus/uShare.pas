@@ -84,6 +84,7 @@ begin
     except
       Exit;
     end;
+    if not Assigned(Data) then Exit;
     DropEditor(Data);
     Result := Data.AsJSON;
   finally

@@ -27,7 +27,8 @@ var
 begin
   try
     if TraceFile = '' then
-      TraceFile := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) + 'graphbuilderlaz.log';
+      TraceFile := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) +
+        'graphbuilderlaz.log';
     AssignFile(F, TraceFile);
     if FileExists(TraceFile) then
       Append(F)

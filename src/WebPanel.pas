@@ -44,6 +44,7 @@ type
     FPenColor: string;
     FState: string;
     function PostState: Boolean;
+    procedure Deliver(const Kind: string; const List: TStrings; const Raw: string);
     function Decimals: Integer;
     procedure SetDecimals(const Value: Integer);
     procedure WebCreated(Sender: TCustomEdgeBrowser; AResult: HRESULT);
@@ -80,6 +81,8 @@ type
     property OnBookmark: TBookmarkEvent read FOnBookmark write FOnBookmark;
     property OnReport: TReportEvent read FOnReport write FOnReport;
     procedure Suggest(const Text: string);
+    procedure Adopt(const List: TStrings; const Raw: string);
+    procedure Preview(const List: TStrings; const Raw: string);
     property OnToEditor: TEditorEvent read FOnToEditor write FOnToEditor;
   end;
 
@@ -256,6 +259,47 @@ begin
   finally
     Root.Free;
   end;
+end;
+
+procedure TWebPanel.Deliver(const Kind: string; const List: TStrings; const Raw: string);
+var
+  Root: TJSONObject;
+  Items: TJSONArray;
+  I: Integer;
+  Text: string;
+begin
+  Items := TJSONArray.Create;
+  try
+    if Assigned(List) then
+      for I := 0 to List.Count - 1 do
+      begin
+        Text := Trim(List[I]);
+        if Text <> '' then Items.Add(Text);
+      end;
+    Root := TJSONObject.Create;
+    try
+      Root.AddPair('type', Kind);
+      Root.AddPair('list', Items);
+      Items := nil;
+      Root.AddPair('text', Raw);
+      Post(Root.ToJSON);
+    finally
+      Root.Free;
+    end;
+  finally
+    Items.Free;
+  end;
+end;
+
+procedure TWebPanel.Adopt(const List: TStrings; const Raw: string);
+begin
+  if (not Assigned(List) or (List.Count = 0)) and (Trim(Raw) = '') then Exit;
+  Deliver('adopt', List, Raw);
+end;
+
+procedure TWebPanel.Preview(const List: TStrings; const Raw: string);
+begin
+  Deliver('preview', List, Raw);
 end;
 
 procedure TWebPanel.WebMessage(Sender: TCustomEdgeBrowser; Args: TWebMessageReceivedEventArgs);
@@ -756,7 +800,8 @@ begin
           Item := List.Items[I] as TJSONObject;
           Formula := Item.GetValue<string>('text', '');
           if Trim(Formula) = '' then Continue;
-          FGraph.Formula.Add(Formula, Item.GetValue<Boolean>('on', True), True, Item.GetValue<Boolean>('trace', True));
+          FGraph.Formula.Add(Formula, Item.GetValue<Boolean>('on', True), True,
+            Item.GetValue<Boolean>('trace', True));
         end;
       end;
       Item := Root.Values['options'] as TJSONObject;

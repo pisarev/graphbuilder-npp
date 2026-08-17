@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Math, Controls, Forms, ExtCtrls, Graphics,
-  Clipbrd, Dialogs, fpjson, jsonparser, uWVBrowser, uWVWinControl, uWVWindowParent,
+  StdCtrls, Clipbrd, Dialogs, fpjson, jsonparser, uWVBrowser, uWVWinControl, uWVWindowParent,
   uWVTypes, uWVTypeLibrary, uWVBrowserBase, uWVLoader, uWVCoreWebView2Args, NotepadPP.Plugin,
   NotepadPP.Docking, uLazTrace, CrossVision.Geometry.Types, CrossGraph.Types, CrossGraph.Engine,
   CrossGraph, ReportFacts;
@@ -30,6 +30,8 @@ type
     FStart: Cardinal;
     FPage: string;
     FStarted: Boolean;
+    FNote: TLabel;
+    FWaitFrom: Cardinal;
     FReady: Boolean;
     FPending: string;
     FDark: Boolean;
@@ -42,6 +44,7 @@ type
     function Decimals: Integer;
     procedure SetDecimals(const Value: Integer);
     procedure Shown(Sender: TObject);
+    procedure Complain(const Text: string);
     procedure Poll(Sender: TObject);
     procedure Tick(Sender: TObject);
     procedure Created(Sender: TObject);
@@ -83,10 +86,13 @@ type
     procedure DockDropped(Sender: TObject);
     procedure DockSwitchIn(Sender: TObject);
     procedure DockSwitchOff(Sender: TObject);
+    function Deliver(const Kind: string; const List: TStrings; const Raw: string): Boolean;
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     procedure SetTheme(const Dark: Boolean);
     function Suggest(const Text: string): Boolean;
+    function Adopt(const List: TStrings; const Raw: string): Boolean;
+    function Preview(const List: TStrings; const Raw: string): Boolean;
   end;
 
 var
@@ -102,6 +108,16 @@ const
   BusyReply = '{"type":"busy"}';
   DefaultKeepRatio = True;
   DefaultPenColor = '--c1';
+  WaitLimit = 15000;
+  NoRuntime = 'The panel is drawn by the Microsoft Edge WebView2 runtime, ' +
+    'and it is not present in the system. On Windows 11 it is standard; on Windows 10 it comes ' +
+    'with Edge, and Microsoft ships it as a separate download. Reason:';
+  NoLoader = 'The panel is drawn by the Microsoft Edge WebView2 runtime, ' +
+    'and the loader was not created. The plugin could not begin to bring it up at all - ' +
+    'details are in the plugin log.';
+  TooLong = 'The Microsoft Edge WebView2 runtime did not come up within ' +
+    'the time allowed. There is nothing more to wait for: close the panel and open it ' +
+    'again, and if it repeats - see the plugin log.';
 
 var
   Dot: TFormatSettings;
@@ -140,7 +156,8 @@ var
 begin
   FillChar(Buffer, SizeOf(Buffer), 0);
   GetModuleFileNameW(HInstance, @Buffer[0], Length(Buffer));
-  Result := IncludeTrailingPathDelimiter(ExtractFilePath(string(PWideChar(@Buffer[0])))) + 'ui\index.html';
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(string(PWideChar(@Buffer[0])))) +
+    'ui\index.html';
 end;
 
 procedure TLazPanel.CreateWnd;
@@ -234,13 +251,37 @@ begin
   if Assigned(FGraph) then FGraph.SetBounds(0, 0, ClientWidth, ClientHeight);
 end;
 
+procedure TLazPanel.Complain(const Text: string);
+begin
+  LogStep('THE PANEL IS EMPTY: ' + Text);
+  UpdateDisplayInfo(Text);
+  if not Assigned(FNote) then
+  begin
+    FNote := TLabel.Create(Self);
+    FNote.Parent := Self;
+    FNote.Align := alTop;
+    FNote.WordWrap := True;
+    FNote.BorderSpacing.Around := 12;
+    FNote.Font.Size := 10;
+  end;
+  FNote.Caption := Text;
+  FNote.Visible := True;
+  if Assigned(FHost) then FHost.Visible := False;
+end;
+
 procedure TLazPanel.Shown(Sender: TObject);
 begin
-  LogStep(Format('show: created=%s, loader=%s', [BoolToStr(FStarted, True), BoolToStr(Assigned(GlobalWebView2Loader), True)]));
-  if FStarted or not Assigned(GlobalWebView2Loader) then Exit;
+  LogStep(Format('show: created=%s, loader=%s',
+    [BoolToStr(FStarted, True), BoolToStr(Assigned(GlobalWebView2Loader), True)]));
+  if FStarted then Exit;
+  if not Assigned(GlobalWebView2Loader) then
+  begin
+    Complain(NoLoader);
+    Exit;
+  end;
   if GlobalWebView2Loader.InitializationError then
   begin
-    UpdateDisplayInfo('WebView2: ' + GlobalWebView2Loader.ErrorMessage);
+    Complain(NoRuntime + ' ' + string(GlobalWebView2Loader.ErrorMessage));
     Exit;
   end;
   if GlobalWebView2Loader.Initialized then
@@ -252,13 +293,34 @@ begin
   end
   else begin
     LogStep('show: loader not ready, waiting');
+    FWaitFrom := GetTickCount;
     FWait.Enabled := True;
   end;
 end;
 
 procedure TLazPanel.Poll(Sender: TObject);
 begin
-  if not Assigned(GlobalWebView2Loader) or not GlobalWebView2Loader.Initialized then Exit;
+  if not Assigned(GlobalWebView2Loader) then
+  begin
+    FWait.Enabled := False;
+    Complain(NoLoader);
+    Exit;
+  end;
+  if GlobalWebView2Loader.InitializationError then
+  begin
+    FWait.Enabled := False;
+    Complain(NoRuntime + ' ' + string(GlobalWebView2Loader.ErrorMessage));
+    Exit;
+  end;
+  if not GlobalWebView2Loader.Initialized then
+  begin
+    if GetTickCount - FWaitFrom > WaitLimit then
+    begin
+      FWait.Enabled := False;
+      Complain(TooLong);
+    end;
+    Exit;
+  end;
   FWait.Enabled := False;
   if FStarted then Exit;
   FStarted := True;
@@ -298,8 +360,7 @@ end;
 
 procedure TLazPanel.Failed(Sender: TObject; aErrorCode: HRESULT; const aErrorMessage: wvstring);
 begin
-  LogStep('WebView2 ERROR: ' + string(aErrorMessage));
-  UpdateDisplayInfo('WebView2: ' + string(aErrorMessage));
+  Complain(NoRuntime + ' ' + string(aErrorMessage));
 end;
 
 procedure TLazPanel.Incoming(Sender: TObject; const aWebView: ICoreWebView2;
@@ -350,6 +411,42 @@ begin
     Root.Free;
   end;
   Result := True;
+end;
+
+function TLazPanel.Deliver(const Kind: string; const List: TStrings; const Raw: string): Boolean;
+var
+  Root: TJSONObject;
+  Items: TJSONArray;
+  I: Integer;
+begin
+  Result := False;
+  if not FReady then Exit;
+  Root := TJSONObject.Create;
+  try
+    Items := TJSONArray.Create;
+    if Assigned(List) then
+      for I := 0 to List.Count - 1 do
+        if Trim(List[I]) <> '' then Items.Add(Trim(List[I]));
+    Root.Add('type', Kind);
+    Root.Add('list', Items);
+    Root.Add('text', Raw);
+    Answer(Root.AsJSON);
+  finally
+    Root.Free;
+  end;
+  Result := True;
+end;
+
+function TLazPanel.Adopt(const List: TStrings; const Raw: string): Boolean;
+begin
+  Result := False;
+  if (not Assigned(List) or (List.Count = 0)) and (Trim(Raw) = '') then Exit;
+  Result := Deliver('adopt', List, Raw);
+end;
+
+function TLazPanel.Preview(const List: TStrings; const Raw: string): Boolean;
+begin
+  Result := Deliver('preview', List, Raw);
 end;
 
 procedure TLazPanel.GraphOverlap(Sender: TObject);
@@ -658,7 +755,8 @@ begin
     Text.Append('],"points":').Append(Count).Append('}');
     FPoints := Count;
     Result := Text.ToString;
-    LogStep(Format('  result: points %d, string length %d, head: %s', [Count, Length(Result), Copy(Result, 1, 220)]));
+    LogStep(Format('  result: points %d, string length %d, head: %s',
+      [Count, Length(Result), Copy(Result, 1, 220)]));
   finally
     Text.Free;
   end;
@@ -1091,6 +1189,11 @@ begin
     finally
       List.Free;
     end;
+    Result := Bookmarks;
+  end
+  else if Mode = 'drop' then
+  begin
+    if not FileExists(SlotFile(Slot)) then Exit;
     DeleteFile(SlotFile(Slot));
     Result := Bookmarks;
   end;
