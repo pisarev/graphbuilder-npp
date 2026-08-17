@@ -83,28 +83,180 @@ licence. Point `WEBVIEW4DELPHI` at a checkout of it before building the Lazarus
 version; the project needs its Lazarus package as well, and `build-lazarus.ps1`
 registers that for you rather than expecting it to be installed already.
 
-## Building and installing
+## Installation
 
-The build that ships is the Lazarus one:
+### From the release
+
+The releases page carries a built plugin - the Lazarus one - as
+`GraphBuilder-npp-<version>-win64.zip`. Four files come out of it:
 
 ```
+GraphBuilderLaz.dll
+WebView2Loader.dll
+ui/index.html
+INSTALL.txt
+```
+
+Close Notepad++, unpack them into `plugins\GraphBuilderLaz\` under your editor,
+start it again, and press Alt+G.
+
+Three conditions, and each of them fails quietly when it is not met:
+
+- **the folder is named after the library** - `GraphBuilderLaz` for this build,
+  `GraphBuilder` for the Delphi one. Notepad++ does not look inside a folder
+  whose name does not match;
+- **the editor is closed while you copy.** It holds a loaded plugin open, and a
+  copy over a running editor fails without a word, leaving the previous version
+  in place;
+- **the editor is x64.** Only x64 is built here; the 32-bit and ARM64 editions of
+  Notepad++ will not load it.
+
+Installing into `Program Files` needs administrator rights. The panel is a web
+page in WebView2, so the WebView2 runtime has to be present - Windows 11 ships
+it.
+
+### Building it, from nothing
+
+Both compilers start the same way: an empty folder with the checkouts side by
+side. The commands are for `cmd`; where PowerShell needs something else it is
+said on the spot.
+
+```
+mkdir %USERPROFILE%\Desktop\PascalPlot
+cd /d %USERPROFILE%\Desktop\PascalPlot
+git clone https://github.com/pisarev/pascal-mathparser.git
+git clone https://github.com/pisarev/pascal-crossgraph.git
+git clone https://github.com/pisarev/graphbuilder-npp.git
+```
+
+`Parser`, `ParseTypes` and `Thread` - the units a compiler asks for first - are
+files in the parser repository, not missing pieces of this one:
+`pascal-mathparser/src/Parser.pas` and its two neighbours.
+
+#### Lazarus, by script
+
+This is the build a release ships. No Delphi licence, no WebView4Delphi package
+installed in your IDE, and no Lazarus configuration of your own: the script
+builds in a throwaway one, registers the package there, and leaves yours as it
+was. Nor does it expect you to have one. A Lazarus whose IDE has never been
+started carries no configuration at all, and `lazbuild` fills the throwaway one
+in from the installation itself.
+
+```
+git clone --branch 1.0.4078.44 https://github.com/salvadordf/WebView4Delphi.git
+
+set WEBVIEW4DELPHI=%CD%\WebView4Delphi
+set LAZARUS_DIR=C:\lazarus
+
+cd graphbuilder-npp
 pwsh -File build-lazarus.ps1
 pwsh -File install.ps1
 ```
 
-The Delphi build is kept for comparison and needs a switch on both steps, since
-it produces a differently named library:
+The tag is worth keeping. WebView4Delphi carries its own `WebView2Loader.dll`,
+and the one beside a release comes from `1.0.4078.44`; the tip of the branch
+moves and brings a different loader with it. `LAZARUS_DIR` is only needed when
+Lazarus is somewhere other than `C:\lazarus`.
+
+Out comes `lazarus\bin\GraphBuilderLaz.dll` with `WebView2Loader.dll` and
+`ui\index.html` beside it. `install.ps1` puts those three where they belong,
+refuses to run while the editor is open, and compares hashes afterwards.
+`NPP_DIR` points it at a Notepad++ that is not in the standard place.
+
+#### Lazarus, by hand
+
+The same checkouts, no scripts. Lazarus wants the WebView4Delphi package
+registered before it will open the project - without it `lazbuild` stops with
+`Broken dependency: WebView4Delphi`. Registering it in a configuration of its own
+leaves your installed Lazarus untouched:
 
 ```
+mkdir lazpcp
+"C:\lazarus\lazbuild.exe" --pcp=%CD%\lazpcp --add-package-link "%CD%\WebView4Delphi\packages\webview4delphi.lpk"
+
+set WEBVIEW4DELPHI=%CD%\WebView4Delphi
+"C:\lazarus\lazbuild.exe" --pcp=%CD%\lazpcp graphbuilder-npp\lazarus\GraphBuilderLaz.lpi
+```
+
+The `.lpk` goes as an argument of its own after `--add-package-link`; the built-in
+help reads as though it belongs to the switch, and that form does not work.
+
+The project links an executable, so the result is renamed and the two files the
+panel needs are put beside it:
+
+```
+cd graphbuilder-npp\lazarus\bin
+ren GraphBuilderLaz.exe GraphBuilderLaz.dll
+mkdir ui
+copy ..\..\..\WebView4Delphi\bin64\WebView2Loader.dll .
+copy ..\..\web\index.html ui\
+```
+
+Then copy those three into `plugins\GraphBuilderLaz\`.
+
+#### Delphi, by script
+
+Delphi 11 Alexandria or newer. The floor is one missing unit: this build reaches
+WebView2 through `Winapi.WebView2`, which Embarcadero began shipping in the RTL
+with 11 - on 10.2, 10.3 and 10.4 it is simply absent, and no search path brings
+it back. WebView4Delphi is not needed here.
+
+```
+cd graphbuilder-npp
 pwsh -File build.ps1
 pwsh -File install.ps1 -Delphi
 ```
 
-Only x64 is built. Notepad++ ships 32-bit and ARM64 editions as well, and
-neither is supported here - the plugin needs a 64-bit editor. Installing needs
-administrator rights and a closed editor: Notepad++ holds the library open while
-it runs, and a copy over a running editor fails silently, leaving the previous
-version in place. `install.ps1` refuses to do that and says so.
+The switch is not optional on the second step: without it `install.ps1` looks for
+the Lazarus library and does not find it.
+
+#### Delphi, by hand
+
+`dcc64` is not on the path by default. It sits in the `bin` folder of the
+installation - `C:\Program Files (x86)\Embarcadero\Studio\37.0\bin` for 13
+Florence - and `rsvars.bat` there puts it on the path of the current prompt.
+
+```
+cd graphbuilder-npp
+mkdir out
+dcc64 -B -Q -U"src;bindings;..\pascal-mathparser\src;..\pascal-mathparser\jit;..\pascal-crossgraph\src" -I"src;bindings;..\pascal-mathparser\src;..\pascal-crossgraph\src" -Eout -NS"System;System.Win;WinApi;Vcl;Vcl.Imaging;Web;Data" src\GraphBuilder.dpr
+```
+
+Keep the quotes in PowerShell: `-NS` carries semicolons, and unquoted they are
+read as command separators before the compiler ever sees them.
+
+Then `out\GraphBuilder.dll` goes into `plugins\GraphBuilder\` and
+`web\index.html` into `plugins\GraphBuilder\ui\`.
+
+There is no `.dproj` here, so a project made from the `.dpr` starts with an empty
+search path, and that `-U` list is what goes into it. The same paths have to be
+on the include path as well: the IDE hands its search path to the compiler as
+both, while `dcc64` given only `-U` stops at
+`CrossGraph.pas(12) F1026 File not found: 'Directives.inc'`.
+
+#### What a build of your own is, and is not
+
+It is a working plugin. It is not a copy of the shipped file: a release is built
+from the monorepo these three repositories are exported from, with a project file
+of its own, and the library comes out a different size. A hash that does not
+match the archive means the build was yours, not that the download was broken.
+
+## The library is not signed
+
+Windows Application Control blocks unsigned libraries: Smart App Control on a
+fresh Windows 11, or a WDAC policy inside a managed organisation. Where such a
+policy is on, the plugin does not load - the loader fails with error 4551, "an
+Application Control policy has blocked this file", and nothing is missing from
+the archive.
+
+This was measured inside Windows Sandbox, where the policy is on by default. The
+import table of the library was read at the same time: ten modules, all of them
+stock Windows, all present. Nothing from Delphi, Lazarus, Free Pascal or the
+Visual C++ runtime is needed.
+
+In practice few machines are affected. Smart App Control turns itself off for
+good the first time unsigned software is installed, which on a machine used for
+programming happens on day one.
 
 ## The bindings are ours
 
