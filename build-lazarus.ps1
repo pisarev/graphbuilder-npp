@@ -81,23 +81,34 @@ if (-not (Test-Path $Lpk)) {
 }
 
 <#
-  Where the configuration is read from.
+  Where the configuration comes from.
 
-  LAZARUS_PCP, when set, is the ANSWER and not a suggestion. The first version of
+  LAZARUS_PCP, when set, is the ANSWER and not a suggestion. An early version of
   this searched a list - the variable, then LOCALAPPDATA, then APPDATA - and took
   the first entry that happened to hold an environmentoptions.xml. So a variable
   pointing at a typo, or at a configuration that has not been created yet, was
   silently replaced by your ordinary one: the build then used settings you never
   named. An explicit override that is quietly ignored is worse than none.
 
-  Now: set - checked alone, and a mismatch stops the build with that very path.
-  Unset - then the standard places are searched, LOCALAPPDATA first, since current
-  Lazarus keeps it there and older versions under APPDATA.
+  With it unset there is nothing to inherit and nothing to guess: the throwaway
+  configuration starts EMPTY. lazbuild fills it in from the installation itself -
+  it copies <LazarusDir>\environmentoptions.xml into a --pcp folder that has
+  none, and reports it as "CopySecondaryConfigFile".
 
-  The third place is config_lazarus beside the Lazarus folder. Some installers put
-  it there and leave the first two empty: the build refused on the very machine
-  that prepares the release, with a correct message that still cost a step to act
-  on.
+  That is a change. The version before this one searched LOCALAPPDATA, APPDATA
+  and config_lazarus beside the Lazarus folder, and stopped when it found none of
+  the three. Both halves of that were wrong, and both were measured:
+
+    * from nothing it stopped. A machine where Lazarus is installed but its IDE
+      has never been started holds a configuration in none of those places - and
+      that machine is the one these instructions are written for;
+    * where it did find one, that one won. Six stale lines left on the release
+      machine named a DIFFERENT Lazarus, and the build obeyed them rather than
+      LAZARUS_DIR: the path it really compiled against stands afterwards in
+      lazarus\lib\x86_64-win64\GraphBuilderLaz.compiled.
+
+  An empty start carries neither fault. There is nothing to look for, and the
+  settings are those of the installation the reader named.
 #>
 <#
   The path is glued with Combine rather than Join-Path on purpose. Join-Path
@@ -117,21 +128,11 @@ if ($env:LAZARUS_PCP) {
         throw "LAZARUS_PCP does not hold a Lazarus configuration: $($env:LAZARUS_PCP) (no environmentoptions.xml there)"
     }
     $SrcPcp = $env:LAZARUS_PCP
-} else {
-    foreach ($c in @([IO.Path]::Combine("$env:LOCALAPPDATA", 'lazarus'),
-                     [IO.Path]::Combine("$env:APPDATA", 'lazarus'),
-                     [IO.Path]::Combine($LazDir, '..', 'config_lazarus'))) {
-        if (Usable $c) { $SrcPcp = [IO.Path]::GetFullPath($c); break }
-    }
-    if (-not $SrcPcp) {
-        throw ('no Lazarus configuration found in ' + $env:LOCALAPPDATA + '\lazarus, ' +
-               $env:APPDATA + '\lazarus or beside ' + $LazDir +
-               ': set LAZARUS_PCP to the folder that holds environmentoptions.xml')
-    }
 }
 
 $Pcp = Join-Path ([IO.Path]::GetTempPath()) ('graphbuilder-pcp-' + [Guid]::NewGuid().ToString('N'))
-Write-Host "=== CONFIG COPY $SrcPcp -> $Pcp ==="
+if ($SrcPcp) { Write-Host "=== CONFIG COPY $SrcPcp -> $Pcp ===" }
+else { Write-Host "=== CONFIG EMPTY $Pcp - lazbuild takes it from $LazDir ===" }
 
 <#
   The copy is INSIDE the try, and that is the whole point of moving it here.
@@ -143,8 +144,13 @@ Write-Host "=== CONFIG COPY $SrcPcp -> $Pcp ==="
   never appeared, so nothing is lost by covering the copy too.
 #>
 try {
-    try { Copy-Item $SrcPcp $Pcp -Recurse -Force -ErrorAction Stop }
-    catch { throw "the configuration could not be copied: $_" }
+    if ($SrcPcp) {
+        try { Copy-Item $SrcPcp $Pcp -Recurse -Force -ErrorAction Stop }
+        catch { throw "the configuration could not be copied: $_" }
+    }
+    else {
+        New-Item -ItemType Directory -Force $Pcp | Out-Null
+    }
 
     <#
       A copied configuration can carry a RELATIVE path to the Lazarus folder -
