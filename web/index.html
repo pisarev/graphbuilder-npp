@@ -129,6 +129,89 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .icon-btn:hover { background: var(--line-soft); color: var(--ink); }
 .icon-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+/* Nothing to undo - the button stays visible and refuses the click. Hiding it
+   is not an option: a button that disappears changes the width of the row, and
+   a row that wraps is the very mechanism that had the panel rebuilding itself
+   twice a second (issue #2). */
+.icon-btn:disabled { opacity: .38; cursor: default; }
+.icon-btn:disabled:hover { background: none; color: var(--ink-dim); }
+
+/* The result of a fit and the caveat that goes with it, under the function
+   list, in plain sight. */
+.fit-note { margin: 6px 10px 2px; padding: 7px 9px; border-radius: 7px;
+  background: var(--line-soft); color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
+.fit-note b { color: var(--ink); font-weight: 600; }
+.fit-note.bad { color: var(--c2); }
+/*
+  The choice of fit. Its width comes from a MEASUREMENT, not from the eye.
+
+  Measuring a series row on 17.08.2026 at a panel width of 258 px: the label
+  asked for 253 px, got 83 and lost 170 - two thirds of it. The space was eaten
+  by this very control: 104 px for the word "fit...", which stands there always
+  and is needed once a session.
+
+  Hence: a shorter caption and a tighter limit. The list of kinds does not
+  suffer - it opens at its own width.
+
+  The limit is taken from the LONGER of the two languages. At 64 px the Russian
+  label fitted while the English one - "series 1: 4 points" - lost 4 px, and it
+  was the bilingual scene of the behaviour stand that caught it. A layout tuned
+  to one language breaks silently for the other.
+*/
+.pf-fit {
+  display: flex; align-items: center; gap: 2px; max-width: 66px;
+  padding: 2px 3px 2px 5px; border-radius: 6px; color: var(--ink-dim);
+  font-size: 11px; cursor: pointer; user-select: none;
+  transition: background .12s ease, color .12s ease;
+}
+.pf-fit:hover { background: var(--line-soft); color: var(--ink); }
+.pf-fit:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pf-fit[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+.pf-fit-face { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-fit-tip { width: 12px; height: 12px; flex: none; fill: none;
+  stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .14s ease; }
+.pf-fit[aria-expanded="true"] .pf-fit-tip { transform: rotate(180deg); }
+
+/*
+  THE LIST OF FIT KINDS hangs on the body: the row it belongs to lives inside a
+  scrolling panel, and a list opened inside that would be cut off by the panel's
+  lower edge.
+*/
+.fit-list {
+  position: fixed; z-index: 40; min-width: 178px; padding: 5px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 11px; box-shadow: var(--shadow-pop);
+  animation: fit-in .13s cubic-bezier(.32, .72, 0, 1);
+}
+@keyframes fit-in { from { opacity: 0; transform: translateY(-4px) } }
+.fit-group {
+  padding: 7px 9px 4px; color: var(--ink-faint);
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .7px; font-weight: 600;
+}
+.fit-item {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 9px; border-radius: 7px; cursor: pointer; outline: none;
+  transition: background .1s ease;
+}
+.fit-item:hover, .fit-item:focus { background: var(--accent-soft); }
+.fit-item:focus .fit-t { color: var(--accent); }
+.fit-t { font-size: 12px; color: var(--ink); }
+/*
+  The line under the name is not decoration: three of the kinds have a domain,
+  and learning about it after a refusal is worse than before the choice.
+*/
+.fit-d { font-size: 10.5px; color: var(--ink-faint);
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; }
+/*
+  A shown selection is set in italic.
+
+  A word in the label does not save it: the label is the first thing to be cut,
+  and what gets cut is exactly the tail where the word stands. A typeface is
+  visible always and takes no room at all. A hollow swatch is not available -
+  it is already taken: that is how a hidden curve is shown.
+*/
+.pf-row.shown .pf-text { font-style: italic; }
 .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
 .primary {
@@ -167,6 +250,11 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .panel-title svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .panel-title em { font-style: normal; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+/* The count of series is the same "word and number" pair as the count of
+   functions, and the gap in it has to be the same. Without a flex of its own it
+   comes from the flow of the text, that is, none at all: the panel read
+   "SERIES2" run together. */
+#serCount { display: flex; align-items: center; gap: 7px; }
 .panel-param {
   margin-left: auto; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
   font-size: 11.5px; color: var(--accent); font-variant-numeric: tabular-nums;
@@ -204,6 +292,26 @@ button { border: 0; background: none; cursor: pointer; }
   position: absolute; right: 5px; display: flex; gap: 1px;
   opacity: 0; pointer-events: none; transition: opacity .12s ease;
 }
+/*
+  ON A SERIES ROW THE ROOM FOR THE CONTROLS IS RESERVED, not handed over to an
+  overlap.
+
+  Reported on 17.08.2026: "the button that closes the row sits exactly on top of
+  the button of the drop-down list, it cannot be used". The measurement bore it
+  out: the choice of fit occupied 201..257 and the controls 214..259 - forty
+  three pixels of overlap. You aim at the list and hit the removal of the series.
+
+  The controls stand absolute, and on a formula row they cover the column of the
+  live value - which is right there, since the value fades out on hover anyway.
+  On a series row a CHOICE OF FIT appeared to the right of the value, and there
+  is nothing to cover it with: it does not fade, and it is needed exactly on
+  hover.
+
+  So a row with a choice gets a right padding of exactly two buttons. A padding
+  rather than a shift of the controls: the controls have to stand in the same
+  place on every row, or they jump as you go from a formula to a series.
+*/
+.pf-row.data { padding-right: 52px; }
 .pf-row:hover .pf-val { opacity: 0; }
 .pf-row:hover .pf-ctrls { opacity: 1; pointer-events: auto; }
 .pf-btn {
@@ -281,6 +389,121 @@ input[type=range]::-webkit-slider-thumb {
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 .value { font-variant-numeric: tabular-nums; color: var(--ink-dim); min-width: 22px; text-align: right; font-size: 12px; }
 
+/*
+  HIDDEN HAS TO MEAN HIDDEN.
+
+  The browser hides `hidden` with `[hidden] { display: none }` from its own
+  stylesheet. That rule has the specificity of a class, and an author stylesheet
+  outranks the built-in one - so the first author rule that sets `display` beats
+  it without a word.
+
+  Which is what happened on 18.08.2026: the table dialog is declared
+  `.sheet { display: flex }`, and it stood on screen permanently. `dataSheet.hidden`
+  answered `true` all the while - the state agreed, the eyes did not. Those two
+  are what parted company, and only a screenshot catches it.
+
+  The rule is general rather than about one dialog: the next `display` in this
+  file will be written without looking, and there will be nobody to repeat the
+  mistake.
+*/
+[hidden] { display: none !important; }
+
+/*
+  THE POINT TABLE DIALOG.
+
+  The dimming behind it is not decoration: while the dialog is open the canvas
+  underneath must not be touched, and that has to be visible rather than found
+  out by clicking into nothing.
+*/
+.sheet-back {
+  position: absolute; inset: 0; z-index: 6;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  backdrop-filter: blur(1.5px);
+  animation: sheet-fade .16s ease;
+}
+.sheet {
+  position: absolute; z-index: 7; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100% - 48px));
+  display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow-pop);
+  animation: sheet-rise .18s cubic-bezier(.32, .72, 0, 1);
+}
+@keyframes sheet-fade { from { opacity: 0 } }
+@keyframes sheet-rise {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.985) }
+}
+.sheet header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+}
+.sheet header b { font-size: 13px; letter-spacing: .1px; }
+.sheet-body { padding: 14px; }
+.sheet footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-top: 1px solid var(--line);
+}
+.sheet footer .grow { flex: 1; }
+.btn {
+  height: 30px; padding: 0 13px; border-radius: 8px; border: 1px solid transparent;
+  font-size: 12.5px; cursor: pointer; transition: all .12s ease;
+}
+.btn.ghost { background: none; color: var(--ink-dim); }
+.btn.ghost:hover { background: var(--line-soft); color: var(--ink); }
+.btn.solid { background: var(--accent); color: #fff; }
+.btn.solid:hover { filter: brightness(1.06); }
+.btn.solid:disabled { opacity: .4; cursor: default; filter: none; }
+
+/*
+  THE INPUT WITH HIGHLIGHTING - a mirror layer under a transparent textarea.
+
+  The metrics belong to both layers at once, so they are set here once and
+  inherited by each. Any difference - another size, another line height, another
+  padding - pulls the letters apart, and the highlighting starts lighting up
+  beside the text.
+*/
+.code-box {
+  position: relative; height: 232px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--glass);
+  overflow: hidden; transition: border-color .12s ease;
+}
+.code-box:focus-within { border-color: var(--accent); }
+.code-mirror, .code-box textarea {
+  position: absolute; inset: 0; margin: 0; padding: 11px 13px;
+  font: 400 12.5px/1.65 "Cascadia Mono", Consolas, ui-monospace, monospace;
+  letter-spacing: 0; tab-size: 8; white-space: pre; overflow: auto;
+  border: 0; background: none; box-sizing: border-box;
+}
+.code-mirror { color: var(--ink); pointer-events: none; }
+.code-box textarea {
+  /*
+    The text is transparent, the caret is not: a person types into the upper
+    layer and reads the lower one. The selection is left visible, or the mouse
+    would lose its answer.
+  */
+  color: transparent; caret-color: var(--ink); resize: none; outline: none;
+}
+.code-box textarea::selection { background: var(--accent-soft); }
+.code-box textarea::placeholder { color: var(--ink-faint); }
+/*
+  The mirror resets font style EXPLICITLY. The markup is built from <i> tags -
+  they are short, and in a layer made entirely of markup the length of a tag
+  decides whether the code can be read. But <i> is italic by default, and the
+  first screenshot showed the whole table in italics. Italic means one thing
+  here, and one only: the header line.
+*/
+.code-mirror i { font-style: normal; }
+.tk-head { color: var(--ink-dim); font-style: italic; }
+.tk-num { color: var(--accent); }
+.tk-sep { color: var(--ink-faint); }
+.tk-bad { color: var(--c2); text-decoration: underline wavy currentColor; text-underline-offset: 3px; }
+.sheet-note {
+  margin: 11px 2px 0; min-height: 18px;
+  color: var(--ink-dim); font-size: 12px; line-height: 1.5;
+}
+.sheet-note b { color: var(--ink); font-weight: 600; }
+.sheet-note.bad { color: var(--c2); }
 .drawer {
   position: absolute; top: 0; right: 0; bottom: 0; width: 296px;
   background: var(--panel); border-left: 1px solid var(--line);
@@ -369,6 +592,52 @@ select.num { text-align: left; width: 108px; }
   border-radius: 4px; background: var(--line-soft); font-variant-numeric: tabular-nums; }
 .report .note { color: var(--ink-faint); font-size: 11px; margin-top: 14px; max-width: 560px; }
 .report .note a { color: var(--accent); }
+
+/*
+  PRINTING. The page carried no print rules at all, and that is exactly the
+  defect reported in issue #3: "printing cuts the information off depending on
+  which part is shown in the window".
+
+  The cause is visible from here: the report lives in `.report` with
+  `position: absolute; inset: 0; overflow: auto`, that is, in a scrolling
+  window. Only the visible part of it reaches the paper; the rest is clipped
+  along with the scrollbar.
+
+  Both the graph and the report are printed, the graph first: facts about
+  curves without the curves themselves are half of an answer, and the canvas is
+  already on the page, so this costs nothing extra.
+*/
+@media print {
+  /* The screen window ends here: on paper the height is not bounded. */
+  html, body { height: auto; overflow: visible; background: #fff; }
+  .app { display: block; height: auto; }
+
+  /* The furniture is not printed: the button row, the bottom bar, the floating
+     panels, the history list. */
+  .bar, .dock, .float, .hist, #undoBtn, #clearBtn { display: none !important; }
+
+  .stage { position: static; height: auto; background: none; cursor: auto; }
+  /* The canvas takes the width of the sheet; a break after it starts the
+     report on a page of its own. */
+  #plot {
+    display: block; width: 100% !important; height: auto !important; max-width: 100%;
+    break-after: page; page-break-after: always;
+  }
+
+  /*
+    The report unfolds WHOLE: no height of its own, no clipping. It is shown
+    even when closed on screen - printing asks for it itself and does not
+    depend on whether the report window was opened.
+  */
+  .report {
+    position: static; inset: auto; display: block !important;
+    overflow: visible; height: auto; padding: 0; z-index: auto; background: none;
+  }
+  /* Breaks fall between sections, not in the middle of a table row or right
+     under a heading. */
+  .report .factbox, .report table.facts, .report .note { break-inside: avoid; page-break-inside: avoid; }
+  .report .factbox h2, .report .factbox h3 { break-after: avoid; page-break-after: avoid; }
+}
 </style>
 </head>
 <body>
@@ -403,13 +672,28 @@ select.num { text-align: left; width: 108px; }
 
     <button class="icon-btn" id="copyBtn" title="Copy state"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="11" height="13" rx="2"/><path d="M8 20h9a2 2 0 0 0 2-2V8"/></svg></button>
     <button class="icon-btn" id="pasteBtn" title="Paste state"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V5"/></svg></button>
-    <button class="icon-btn" id="printBtn" title="Print report"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="7" rx="2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg></button>
-    <button class="icon-btn" id="clearBtn" title="Clear the formula list"><svg viewBox="0 0 24 24"><path d="M4 6h16M9 6V4h6v2M6 6l1 15h10l1-15"/></svg></button>
+    <!-- The caption drops the word "report": both the graph and the report are
+         printed, and the promise should match the deed. -->
+    <button class="icon-btn" id="printBtn" title="Print"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="7" rx="2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg></button>
     <button class="icon-btn npp-only" id="toTabBtn" title="Report to a new tab" hidden><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 9v6M9 12h6"/></svg></button>
     <button class="icon-btn npp-only" id="toCaretBtn" title="Report at the caret" hidden><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h7M4 17h10"/><path d="M17 9v9M14 12l3-3 3 3"/></svg></button>
     <button class="icon-btn" id="reportBtn" title="Report"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
     <button class="icon-btn" id="themeBtn" title="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
     <button class="icon-btn" id="gearBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+
+    <!--
+      Undo and clear stand AT THE END of the row and behind a separator, apart
+      from the harmless ones. "Clear" used to sit between "Print" and "Report" -
+      three neighbouring buttons, two of which show something and the third
+      wipes the formula list without a single question. The report in issue #3
+      opened with it.
+
+      Undo stands BEFORE clear: a miss lands on the safe action rather than on
+      the destructive one.
+    -->
+    <div class="sep"></div>
+    <button class="icon-btn" id="undoBtn" title="Nothing to undo" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="icon-btn" id="clearBtn" title="Clear the panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M9 6V4h6v2M6 6l1 15h10l1-15"/></svg></button>
   </div>
 
   
@@ -422,6 +706,17 @@ select.num { text-align: left; width: 108px; }
         <span class="panel-title">
           <svg viewBox="0 0 24 24"><path d="M3 12c3.24-6 5.76-6 9 0s5.76 6 9 0"/></svg>
           functions<em id="fnCount">0</em>
+          <!--
+            Series are counted SEPARATELY and only when there are any.
+
+            Adding them to the functions is not allowed: a series of points is
+            not a function, and "functions 2" with one curve and one series is
+            untrue. Staying silent about them is not allowed either: the
+            screenshot of the report on 17.08.2026 showed "functions 0" above a
+            visible series row, and the person read it as a breakage. One of the
+            two numbers has to explain the other.
+          -->
+          <span id="serCount" hidden>series<em id="serNum">0</em></span>
         </span>
         <span class="panel-param" id="traceParam"></span>
         <button class="icon-btn panel-fold" id="panelFold" title="Collapse">
@@ -429,6 +724,13 @@ select.num { text-align: left; width: 108px; }
         </button>
       </div>
       <div class="panel-list" id="panelList"></div>
+      <!--
+        The result of a fit and the caveat that goes with it. On the screen, not
+        in a tooltip: the warning that R^2 grows with the number of coefficients
+        by itself, and that the fit runs on logarithms, has to catch the eye on
+        its own. Hidden in a tooltip it is the same as unwritten.
+      -->
+      <div class="fit-note" id="fitNote" hidden></div>
       <button class="panel-add" id="panelAdd">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>formula
       </button>
@@ -448,6 +750,23 @@ select.num { text-align: left; width: 108px; }
       <button class="icon-btn" aria-pressed="true" data-t="peak" title="Extrema"><svg viewBox="0 0 24 24"><path d="M3 12c2.5-5 6.5-5 9 0s6.5 5 9 0"/><circle cx="7.5" cy="8.25" r="2.3" fill="currentColor" stroke="none"/><circle cx="16.5" cy="15.75" r="2.3" fill="currentColor" stroke="none"/></svg></button>
       <div class="sep" style="margin: 4px 3px"></div>
       <button class="icon-btn" aria-pressed="true" data-t="sign" title="Curve labels"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9z"/><circle cx="16.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg></button>
+      <!--
+        THE POINT TABLE. This button does not exist in the plugin: there the
+        data comes from the editor - by selection or Alt+Shift+G - and a second
+        road to the same place would only confuse. Shown by the web-only mark,
+        see the hello handler.
+
+        It stands APART, behind a separator of its own, and here is why. All six
+        buttons above are switches: on or off, "what to show". This one is an
+        action: it opens a dialog. Putting it in the same row would let the shape
+        lie about the meaning, and a person would wait for it to toggle.
+
+        The icon is a corner of axes with points scattered along it: exactly how a
+        data series is drawn on the canvas. A table or a grid would not do - a
+        grid already stands next to it, and two similar icons would be confused.
+      -->
+      <div class="sep web-only" style="margin: 4px 3px" hidden></div>
+      <button class="icon-btn web-only" id="dataBtn" hidden title="Point table" aria-label="Point table"><svg viewBox="0 0 24 24"><path d="M4 3v15a3 3 0 0 0 3 3h14"/><circle cx="9" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.5" cy="11" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
     </div>
 
     
@@ -480,6 +799,56 @@ select.num { text-align: left; width: 108px; }
   </div>
 
   
+  <!--
+    THE POINT TABLE DIALOG. Web version only, see the button above.
+
+    The shape sits between the settings drawer and a tooltip: a drawer slides in
+    from the side and stays, while a person comes here for one action - paste,
+    look, build. So the dialog stands in the middle of the canvas with the
+    background dimmed: it takes the whole of the attention and gives it back
+    whole.
+  -->
+  <!--
+    The dialog and the dimming are NOT marked web-only, and that matters.
+
+    The web-only mark is taken off everything at once, while on the dialog the
+    same `hidden` means something else entirely - whether it is open or closed.
+    The two meanings collided on the one attribute straight away: showing the
+    button threw the dialog open with it.
+
+    Hiding the dialog from the plugin separately is not needed: the only way in
+    is the button, and the plugin has no button.
+  -->
+  <div class="sheet-back" id="dataBack" hidden></div>
+  <section class="sheet" id="dataSheet" hidden role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+    <header>
+      <b id="dataTitle">Point table</b>
+      <button class="icon-btn" id="dataClose" title="Close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+    <div class="sheet-body">
+      <!--
+        The input and the highlighting layer lie ON TOP OF EACH OTHER and have to
+        agree to the pixel: font, size, line height, padding, wrapping. Text
+        inside a textarea cannot be coloured - that is a limit of the element
+        itself - and a mirror is the only way left. Let the metrics drift and the
+        letters double, with any small thing to blame, a different padding
+        included.
+      -->
+      <div class="code-box">
+        <pre class="code-mirror" id="dataMirror" aria-hidden="true"></pre>
+        <textarea id="dataInput" spellcheck="false" autocomplete="off" wrap="off"
+                  aria-describedby="dataNote"
+                  placeholder="Paste a table: two columns of numbers.&#10;The separator is guessed for you.&#10;&#10;time;distance&#10;0.1;0.049&#10;0.2;0.196&#10;0.3;0.441"></textarea>
+      </div>
+      <p class="sheet-note" id="dataNote" role="status" aria-live="polite"></p>
+    </div>
+    <footer>
+      <button class="btn ghost" id="dataDemo">Example</button>
+      <span class="grow"></span>
+      <button class="btn ghost" id="dataCancel">Cancel</button>
+      <button class="btn solid" id="dataOk" disabled>Build</button>
+    </footer>
+  </section>
   <aside class="drawer" id="drawer">
     <header>
       <b>Settings</b>
@@ -617,6 +986,16 @@ function keepTheme(value) {
 })();
 
 const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
+/*
+  No host at all - the page was opened as a file. That is the web too, and there
+  is nothing to wait for: nobody is going to come and mention an editor. Show it
+  at once.
+
+  The hello handler below answers the other two cases - the plugin and the site.
+*/
+if (!host)
+  addEventListener("DOMContentLoaded", () =>
+    document.querySelectorAll(".web-only").forEach(b => b.hidden = false));
 const palette = ["--c1", "--c2", "--c3", "--c4", "--c5"];
 
 const curves = [];
@@ -779,8 +1158,27 @@ function answer(m) {
     setting that is absent: a reader turns it and concludes something about
     behaviour that is not there.
   */
+  /*
+    THE WEB VERSION IS RECOGNISED BY THE ABSENCE OF AN EDITOR, and only by an
+    explicit answer.
+
+    The point table button belongs anywhere the data has nowhere else to come
+    from: on the site, in a standalone Lazarus window. In Notepad++ it is one
+    button too many - there a selection and Alt+Shift+G do the same job.
+
+    It is shown ON A SIGNAL, not on a timer and not on a guess. The plugin host
+    answers `editor: true` right on `ready`; the site host answers `hello`
+    without it. The button is hidden in the markup meanwhile, so in the plugin it
+    never flashes for a frame - and a button that appears and disappears is worse
+    than one that is missing.
+
+    The case of no host at all - the page opened as a file - is handled below,
+    where `host` is declared: that is the web too, and there is nothing to wait
+    for.
+  */
   if (m.type === "hello") {
     if (m.editor) document.querySelectorAll(".npp-only").forEach(b => b.hidden = false);
+    else document.querySelectorAll(".web-only").forEach(b => b.hidden = false);
     if (m.budgets) document.querySelectorAll(".budget-only").forEach(b => b.hidden = false);
     return;
   }
@@ -800,10 +1198,169 @@ function answer(m) {
     build();
     return;
   }
-  if (m.type === "extremes") { data.extremes = { max: m.max || [], min: m.min || [] }; paint(); return; }
+  /*
+    A PREVIEW OF THE SELECTION. Asked for by the user on 17.08.2026: "I selected
+    the contents of a csv table with coordinates and GraphBuilder reacted at
+    once, as if Alt+Shift+G had been pressed".
+
+    The rule of a replaceable slot was already there in suggest, and here it is
+    EXTENDED to tables and to several formulas. The difference between the three
+    paths is now this:
+
+      suggest - one formula under the cursor, one slot, the next pickup replaces
+      preview - the whole selection: a table OR several formulas, the same slot,
+                the next selection overwrites it. Nothing accumulates
+      adopt   - Alt+Shift+G, a deliberate act: the same, but FOR GOOD
+
+    Why nothing may accumulate and why the slot is one: the selection changes on
+    every drag of the mouse and on every Shift+arrow. Adding up what is shown
+    would fill the list with fifty curves in a minute of work, and they would
+    have to be removed one at a time. That is exactly the argument by which
+    adopt was made a separate key in 1.2.1; the slot removes the argument rather
+    than repeals it.
+
+    The mark is the very same one - editor: true. Starting a second one
+    ("preview") would mean keeping two names for one meaning, "this belongs to
+    the editor and not to the person", and they would have drifted apart by the
+    next release.
+
+    AN EMPTY SELECTION TAKES THE PREVIEW OFF rather than leaving the previous
+    one: otherwise points from a selection long gone would hang on the canvas as
+    somebody else's.
+  */
+  if (m.type === "preview") {
+    const raw = String(m.text || "");
+    /*
+      The same selection a second time costs NOTHING.
+
+      The notifications of the editor come in a stream, and the host cuts off
+      the repeats at its end; here the cut-off stands a second time, and not for
+      nothing. Without it every notification would mean build() - a full
+      recomputation of the graph by the engine - and it comes on every movement
+      of the caret inside the selection. The gate is cheap, and the price of its
+      absence is visible to the eye: the panel twitches while a person is merely
+      moving the mouse.
+    */
+    if (raw === previewOf) return;
+    dropPreview();
+    const table = parseTable(raw);
+    if (table) {
+      /*
+        What has already been taken for good is not shown again. Otherwise it
+        would go like this: Alt+Shift+G is pressed, the table lies down as a
+        permanent series, the selection stays as it was - and the very next
+        notification of the editor would put a preview copy of the same points
+        on top of it.
+      */
+      const sign = table.points.length + ':' + table.points[0].x + ':'
+                 + table.points[table.points.length - 1].y;
+      if (!series.some(s => !s.editor && s.points.length + ':' + s.points[0].x + ':'
+                            + s.points[s.points.length - 1].y === sign))
+        addSeries(table, true);
+    } else {
+      const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
+      list.forEach(text => {
+        if (curves.some(c => c.text === text)) return;
+        curves.push({ text: text, on: true, trace: true, color: null, editor: true });
+      });
+      // One formula in the input field is what the pickup used to do, and there
+      // is no reason to lose that habit on the way to the preview: a person is
+      // used to seeing the selection in the field and editing it there.
+      if (list.length === 1) el("formula").value = list[0];
+    }
+    previewOf = raw;
+    drawPanel();
+    build();
+    return;
+  }
+  /*
+    SEVERAL FORMULAS FROM THE SELECTION. Asked for in issue #3, where the
+    reporter also proposed a hotkey instead of reading the selection all the
+    time - and he was right.
+
+    The difference from suggest is in the meaning, not in the name:
+
+      suggest - picked up on the fly. There is ONE formula and it lives in a
+                slot of its own (editor: true); the next pickup replaces it.
+                Otherwise the panel would fill with rubbish from every movement
+                of the mouse.
+      adopt   - a deliberate act. AS MANY formulas as there are, laid down as
+                ordinary rows, and they stay.
+
+    Repeats are not added: selecting the same block twice is an ordinary thing
+    to do, and a second copy of the same curve is of no use.
+  */
+  if (m.type === "adopt") {
+    /*
+      A selection can also be a table. Same path and same rule as for the
+      clipboard: the table first, the formula list second. There is deliberately
+      no separate button for data - a person selects columns exactly as he would
+      select formulas, and a second way in would have to be looked for and
+      remembered.
+
+      The table is looked for in the RAW selection (m.text), not in m.list. The
+      host has already sifted that list through the formula parser, and table
+      rows like "1;2" do not get in - they do not parse as formulas. So looking
+      for a table in the list is useless: it is empty in exactly the case the
+      search exists for. The page decides, since it holds both parsers.
+    */
+    /*
+      The preview is taken off BEFORE the adoption, and this is not tidying up.
+      The same selection is being shown temporarily right now; without taking
+      the preview off we would lay its temporary copy beside the permanent one -
+      two identical rows in the list, one of which vanishes by itself and the
+      other does not.
+    */
+    dropPreview();
+    const asTable = parseTable(m.text);
+    if (asTable) { addSeries(asTable); return; }
+    const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
+    let added = 0;
+    list.forEach(text => {
+      if (curves.some(c => c.text === text)) return;
+      curves.push({ text: text, on: true, trace: true, color: null, editor: false });
+      added++;
+    });
+    if (!added) return;
+    emptiedByUser = false;
+    drawPanel();
+    build();
+    return;
+  }
+  /*
+    THERE IS NOTHING TO MARK WHEN THERE IS NOTHING ON THE CANVAS.
+
+    Reported with a screenshot on 17.08.2026: "FUNCTIONS 0 SERIES 0", the list
+    empty, and the canvas still carrying four extremum marks and the dashed line
+    of the trace.
+
+    The cause is the order of the messages. The curves, the marks and the trace
+    arrive SEPARATELY and at different times. On a clearing the page puts out
+    what it has computed and asks for a recomputation; the host answers with an
+    empty set of curves - and the guard above (the set has changed, the old marks
+    are not about it) honestly takes everything off. And then, in its own turn,
+    comes the message about the extrema computed BEFORE the clearing, and it
+    lands on top of the emptiness.
+
+    The guard above stands in the answer about curves and does not extend to this
+    message. Here is the same thought applied to the same place from the other
+    side: a mark belongs to a curve, and without the curve it means nothing. What
+    is checked is what is DRAWN (data.seg) rather than the list of formulas: the
+    list may already have grown while the engine was computing, and marks from
+    the previous set would be somebody else's all the same.
+  */
+  if (m.type === "extremes") {
+    data.extremes = data.seg.length
+      ? { max: m.max || [], min: m.min || [] }
+      : { max: [], min: [] };
+    paint();
+    return;
+  }
   if (m.type === "trace") {
 
-    data.trace = { polar: !!m.polar, param: m.param, points: m.list || [] };
+    data.trace = data.seg.length
+      ? { polar: !!m.polar, param: m.param, points: m.list || [] }
+      : null;
     paintTraceValues();
     paint();
     return;
@@ -812,6 +1369,20 @@ function answer(m) {
   if (m.type === "clipboard") {
     const shared = shareState(m.text);
     if (shared) { applySnapshot(Object.assign({ type: "snapshot" }, shared)); return; }
+    /*
+      The table is tried BEFORE the formula list, and the order matters here.
+
+      The rows "1;2" and "2;4" are perfectly legal rows for the formula list:
+      they parse as expressions and give a pair of horizontal lines. With the
+      order reversed a table would silently turn into nonsense, and a person
+      would see two straight lines instead of his measurements.
+
+      There is no trouble the other way round: parseTable needs at least two
+      numeric rows of two fields, and a formula list does not fit that - checked
+      separately by a scene of the behaviour stand.
+    */
+    const table = parseTable(m.text);
+    if (table) { addSeries(table); return; }
     const lines = String(m.text || "").split(/\r?\n/)
       .map(s => s.trim()).filter(Boolean).slice(0, 8);
     if (!lines.length) return;
@@ -830,6 +1401,10 @@ function answer(m) {
 
   if (m.type === "report") {
     el("reportBody").innerHTML = m.html || "<p class='empty'>Build a graph - facts about the functions will appear here.</p>";
+    // Printing was waiting for exactly this: it asks for the report and prints
+    // when the report arrives, not on a timer. Otherwise the paper would carry
+    // the report of the previous build.
+    printNow();
     return;
   }
 }
@@ -848,7 +1423,16 @@ function applySnapshot(m) {
     in cartesian with default settings - everything was lost except the
     emptiness itself.
   */
-  if (m.formulas.length === 0 && !m.cleared) return;
+  /*
+    A data series counts as content on equal terms with formulas.
+
+    Otherwise it went like this: a person pasted a table, made no formulas, put
+    it in a bookmark - and on the way back the snapshot was rejected as "empty"
+    and his points were gone. Emptiness without the mark is still thrown away:
+    it means an accident, not a choice.
+  */
+  if (m.formulas.length === 0 && !m.cleared
+      && !(Array.isArray(m.series) && m.series.length)) return;
   const o = m.options || {};
   if (m.cs) [...el("cs").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cs === m.cs)));
   if ("maxX" in o) view.w = o.maxX;
@@ -865,6 +1449,20 @@ function applySnapshot(m) {
   });
   curves.length = 0;
   (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null, editor: f.editor }));
+  /*
+    Data series are restored along with the formulas. A snapshot with no series
+    field is either from an older release or came in through a share link: then
+    there are simply no series, and the list is emptied rather than left over
+    from the previous state. Otherwise a bookmark without data would bring back
+    somebody else's points on top of your own picture.
+  */
+  series.length = 0;
+  previewOf = null;
+  (m.series || []).forEach(s => {
+    if (!s || !Array.isArray(s.points) || s.points.length < 2) return;
+    series.push({ name: s.name || "", on: s.on !== false, points: s.points,
+                  cut: false, skipped: 0 });
+  });
   emptiedByUser = curves.length === 0;
   /*
     The other system's shelf comes from the snapshot when it carries one. An
@@ -1035,6 +1633,9 @@ function demo(message) {
     if (message.mode === "save") demoMarks[message.slot] = demoSnapshot();
     if (message.mode === "load" && demoMarks[message.slot])
       answer(Object.assign({ type: "snapshot" }, demoMarks[message.slot]));
+    // Clearing a slot. The only way to free it now that loading no longer does
+    // so, and without this branch ten occupied slots would be a dead end.
+    if (message.mode === "drop") demoMarks[message.slot] = null;
     answer({ type: "bookmarks", slots: demoMarks.map(Boolean) });
     return;
   }
@@ -1254,6 +1855,13 @@ function state() {
       if (shelf[other]) out[other] = shelf[other];
       return out;
     })(),
+    /*
+      Data series travel with the state: a person expects his table to survive a
+      restart of the editor exactly as his formulas do. They are stripped from
+      the SHARE LINK separately - see withoutEditor.
+    */
+    series: series.filter(s => !s.editor)
+      .map(s => ({ name: s.name, on: s.on, points: s.points })),
     options: options()
   };
 }
@@ -1296,7 +1904,125 @@ const ShareMark = "#s=1.";
   field would leave the other two, while replacing by key through JSON covers the
   whole tree at once - and covers whatever the state grows later.
 */
-const withoutEditor = (key, value) => (key === "editor" ? undefined : value);
+/*
+  Along with the editor mark, a DATA SERIES is stripped from the link as well.
+
+  A link should carry the result, not the raw measurements. A series can hold
+  ten thousand points; packed into an address it gives a link that no input
+  field will take and nobody will forward. The formula fitted to it is an
+  ordinary string, and that stays in the link: the recipient sees the finding,
+  not the table.
+
+  In the session snapshot and in a bookmark the series is kept, on the contrary:
+  there it lives on the person's own machine, and he expects his data to still
+  be there.
+*/
+const withoutEditor = (key, value) =>
+  (key === "editor" || key === "series" ? undefined : value);
+
+/*
+  READING A TABLE: text with numbers -> a series of points.
+
+  Asked for in issue #3: "adding a graph from a table written to a template, or
+  from an open csv with a choice of separator". The separator he asks to choose,
+  but it can almost always be guessed - a choice belongs where guessing fails,
+  not instead of guessing.
+
+  The parsing lives on the PAGE, as does the parsing of a share link and of a
+  formula list from the clipboard: two implementations of one parser have
+  already drifted apart once in this project, and the rule since then is one -
+  one parser in one place.
+
+  What is genuinely hard here, and why this is not ten lines:
+
+    separator   a semicolon here, a comma there, a tab out of a spreadsheet.
+                And a comma is also a decimal point - "1,5;2,5" - in which case
+                it cannot be the separator
+    header      a first row that is not numeric holds column names, not data
+    columns     there can be more than two; the first two numeric ones are taken
+    rubbish     rows with a different number of columns, empty ones, comments
+
+  EVERYTHING the caller may need is returned: the points, and how they were
+  read. A separator guessed silently, with no way to ask about it, is exactly
+  the case where a person cannot tell why the answer came out wrong.
+*/
+/*
+  IS THIS A NUMBER - kept outside on purpose, ONE place for everyone.
+
+  Two callers ask: the table parser itself, and the highlighting in the input.
+  Writing the highlighting its own check would be a second parser of the same
+  thing, and in this project two parsers of one thing have drifted apart before -
+  on formulas and on intersections. Drifting here would give the worst of it: the
+  field calls a line good while the parser throws it out, and a person cannot see
+  what is wrong with the data.
+
+  A comma counts as a decimal point, spaces inside a number are dropped: "1 234,5"
+  out of a table is a number, not three fields.
+*/
+const TableSeps = [";", "\t", ",", " "];
+
+function tableNumber(s) {
+  const t = String(s).trim().replace(",", ".").replace(/\s/g, "");
+  if (!t || !/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return null;
+  const v = parseFloat(t);
+  return Number.isFinite(v) ? v : null;
+}
+function parseTable(text) {
+  const lines = String(text || "").split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(s => s && !s.startsWith("#") && !s.startsWith("//"));
+  if (lines.length < 2) return null;
+
+  /*
+    The separator is chosen by how EVENLY it splits, not by how often the sign
+    occurs. Frequency deceives: in "1,5;2,5" there are as many commas as
+    semicolons, but splitting on the comma gives two fields holding halves of
+    numbers, while splitting on the semicolon gives two numbers. We count which
+    separator yields the higher share of numeric fields.
+  */
+  const seps = TableSeps;
+  const num = tableNumber;
+  const split = (line, sep) => (sep === " "
+    ? line.split(/\s+/) : line.split(sep)).map(s => s.trim());
+
+  let best = null;
+  for (const sep of seps) {
+    const rows = lines.map(l => split(l, sep));
+    const wide = rows.filter(r => r.length >= 2);
+    if (wide.length < 2) continue;
+    let good = 0, cells = 0;
+    for (const r of wide) {
+      for (const c of r.slice(0, 2)) { cells++; if (num(c) !== null) good++; }
+    }
+    const score = cells ? good / cells : 0;
+    // On an equal score the separator named earlier wins: a semicolon and a tab
+    // are less ambiguous than a comma, and a comma than a space.
+    if (!best || score > best.score + 1e-9) best = { sep, rows, score };
+  }
+  if (!best || best.score < 0.5) return null;
+
+  // The header: a first row in which neither of the first two fields is a number.
+  const header = best.rows.length > 1
+    && num(best.rows[0][0]) === null && num(best.rows[0][1]) === null
+    ? best.rows[0].slice() : null;
+  const body = header ? best.rows.slice(1) : best.rows;
+
+  const points = [];
+  let skipped = 0;
+  for (const r of body) {
+    const x = num(r[0]), y = num(r[1]);
+    if (x === null || y === null) { skipped++; continue; }
+    points.push({ x: x, y: y });
+  }
+  if (points.length < 2) return null;
+  return {
+    sep: best.sep, points: points, skipped: skipped,
+    columns: best.rows[0].length, header: header,
+    // The name of the series comes from the header when there is one: it is
+    // easier to recognise your own column that way.
+    name: header && header[1] ? String(header[1]) : ""
+  };
+}
 
 function shareLink() {
   const bytes = new TextEncoder().encode(JSON.stringify(state(), withoutEditor));
@@ -1340,6 +2066,12 @@ const eyeOff = '<svg viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9.9 5.2
 
 function drawPanel() {
   el("fnCount").textContent = curves.length;
+  // Series are named only when there are any: a line "series 0" in the heading
+  // would be noise for those who never open a table at all.
+  el("serNum").textContent = series.length;
+  el("serCount").hidden = series.length === 0;
+  // Every change of the list passes through here, so the caveat is checked here.
+  syncFitNote();
   const box = el("panelList");
   box.innerHTML = "";
   curves.forEach((c, i) => {
@@ -1360,6 +2092,8 @@ function drawPanel() {
     trace.onclick = () => { c.trace = !c.trace; drawPanel(); build(); };
     eye.onclick = () => { c.on = !c.on; drawPanel(); build(); };
     kill.onclick = () => {
+      // Removing a curve is destructive too, and is undone by the same mechanism.
+      remember("removal of formula " + (c.text || i + 1));
       curves.splice(i, 1);
       if (!curves.length) emptiedByUser = true;
       drawPanel();
@@ -1367,8 +2101,221 @@ function drawPanel() {
     };
     box.appendChild(row);
   });
+  /*
+    Data series stand in the same list, below the formulas.
+
+    They get no panel of their own: the function list is the list of what is
+    drawn, and a series belongs there with the curves. Without a row in the list
+    a series would be a dead end - you paste a table and have no way to remove
+    it, exactly as it was with bookmarks.
+
+    A series has no tracing: tracing is run by the engine along a formula, and
+    there is no formula behind a series. The button is not shown at all - one
+    shown and not working is worse than one absent.
+  */
+  series.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "pf-row data" + (s.on ? "" : " off") + (s.editor ? " shown" : "");
+    /*
+      SHORT ON THE SCREEN, FULL IN THE TOOLTIP. Measured on 17.08.2026: the
+      label column is 102 px, while the label with all its caveats asks for 253
+      - two thirds went into the ellipsis, and what went was exactly the tail
+      where the caveats stood. Writing what will certainly not fit is writing
+      into nowhere.
+
+      What stays in sight is what the row cannot be recognised without: the name
+      and the number of points. The caveats go into the tooltip, and a shown
+      selection is marked by TYPEFACE - that is visible always and takes no room.
+
+      A name would not do for the mark: for a table with a header it comes out
+      of the csv, and the mark would disappear in half the cases.
+    */
+    const notes = [];
+    if (s.editor) notes.push("shown selection, the next one replaces it");
+    if (s.cut) notes.push("shown only the first " + SeriesLimit);
+    if (s.skipped) notes.push("rows skipped " + s.skipped);
+    const label = (s.name ? s.name + ": " : "") + s.points.length + " points";
+    const title = label + (notes.length ? " - " + notes.join(", ") : "");
+    row.innerHTML =
+      '<i class="pf-swatch" style="background:'
+        + css(palette[(curves.length + i) % palette.length]) + '"></i>' +
+      '<span class="pf-text" title="' + esc(title) + '">' + esc(label) + '</span>' +
+      /*
+        The empty column of the live value is GONE from a series row.
+
+        It stood here so that the columns of series rows and of formula rows
+        would line up. They stopped lining up the moment a series row needed a
+        right padding for the controls: without it the choice of fit ended up
+        underneath the buttons. Keeping a dash for an alignment that no longer
+        exists means spending sixteen pixels on nothing - and those are exactly
+        the pixels the label was short of.
+      */
+      /*
+        The kind is chosen from a list OF OUR OWN, not a system select.
+
+        A system list is drawn by the operating system: its font, its padding,
+        its highlight for the chosen row. In a panel where everything else is
+        made to one measure it looked like a patch - and that was the only
+        complaint against it, since it worked correctly.
+
+        The keyboard has to stay as it was: the list opens on space and on arrow
+        down, walks with the arrows, chooses with Enter, closes with Esc. A
+        prettier list that cannot be used from the keyboard is not prettier, it
+        is worse; which is why the markup carries role and aria rather than
+        classes alone.
+      */
+      '<div class="pf-fit" tabindex="0" role="combobox" aria-haspopup="listbox"' +
+           ' aria-expanded="false" title="Fit a formula to these points">' +
+        '<span class="pf-fit-face">fit</span>' +
+        '<svg class="pf-fit-tip" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></svg>' +
+      '</div>' +
+      '<span class="pf-ctrls">' +
+        '<button class="pf-btn eye" title="' + (s.on ? "Hide" : "Show") + '">'
+          + (s.on ? eyeOn : eyeOff) + '</button>' +
+        '<button class="pf-btn kill" title="Remove">' +
+          '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '</span>';
+    /*
+      The FAMILY is chosen by the person, not by us on the best R^2.
+
+      The temptation to choose for him is strong, and the answer would almost
+      always be the same: a polynomial of the fifth degree. R^2 grows with the
+      number of coefficients by itself, and the "best" by that measure is the
+      most overfitted. Let the one who knows where the data came from choose.
+    */
+    fitPicker(row.querySelector(".pf-fit"), v => {
+      applyFit(s, v.startsWith("poly") ? "poly" : v,
+               v.startsWith("poly") ? parseInt(v.slice(4), 10) : 0);
+    });
+    const [eye, kill] = row.querySelectorAll(".pf-btn");
+    eye.onclick = () => { s.on = !s.on; drawPanel(); paint(); };
+    kill.onclick = () => {
+      // Removing a series is destructive, and is undone by the same mechanism.
+      remember("removal of data series" + (s.name ? " " + s.name : ""));
+      series.splice(i, 1);
+      drawPanel();
+      paint();
+    };
+    box.appendChild(row);
+  });
   paintTraceValues();
 }
+
+/*
+  CHOOSING THE KIND OF FIT: a list of our own instead of the system one.
+
+  The kinds fall into three parts, and the division is not cosmetic. The straight
+  line stands alone: it is the only kind with no degree to choose and the answer
+  wanted most often. The polynomials form a group of their own, because the
+  choice between them turns on one thing - the degree - rather than on the nature
+  of the data. The remaining three are substitutions, each with a domain: the
+  exponential needs positive y, the power one positive both, the logarithmic
+  positive x. Looking at the groups, a person sees the question each one answers.
+
+  The list hangs on the body rather than inside the row: the row lives in a
+  scrolling panel with an overflow of its own, and a list inside it would be cut
+  off at the lower edge.
+*/
+const FitKinds = [
+  { group: "" },
+  { v: "line", t: "line", d: "y = a·x + b" },
+  { group: "polynomial" },
+  { v: "poly2", t: "degree 2", d: "parabola" },
+  { v: "poly3", t: "degree 3" },
+  { v: "poly4", t: "degree 4" },
+  { v: "poly5", t: "degree 5" },
+  { group: "by substitution" },
+  { v: "exp", t: "exponential", d: "y = a·e^bx, needs y > 0" },
+  { v: "power", t: "power", d: "y = a·x^b, needs x > 0 and y > 0" },
+  { v: "log", t: "logarithmic", d: "y = a·ln x + b, needs x > 0" },
+];
+
+let fitOpen = null;
+
+function closeFit() {
+  if (!fitOpen) return;
+  fitOpen.list.remove();
+  fitOpen.face.setAttribute("aria-expanded", "false");
+  fitOpen = null;
+}
+
+function fitPicker(face, pick) {
+  const open = () => {
+    if (fitOpen && fitOpen.face === face) { closeFit(); return; }
+    closeFit();
+    const list = document.createElement("div");
+    list.className = "fit-list";
+    list.setAttribute("role", "listbox");
+    FitKinds.forEach(item => {
+      if (item.group !== undefined) {
+        if (!item.group) return;
+        const head = document.createElement("div");
+        head.className = "fit-group";
+        head.textContent = item.group;
+        list.appendChild(head);
+        return;
+      }
+      const row = document.createElement("div");
+      row.className = "fit-item";
+      row.setAttribute("role", "option");
+      row.tabIndex = -1;
+      row.dataset.v = item.v;
+      row.innerHTML = '<span class="fit-t">' + esc(item.t) + "</span>"
+        + (item.d ? '<span class="fit-d">' + esc(item.d) + "</span>" : "");
+      row.onclick = () => { closeFit(); pick(item.v); };
+      list.appendChild(row);
+    });
+    document.body.appendChild(list);
+    /*
+      The list goes under the button, and ABOVE it when there is no room below.
+      The panel sits at the top edge, but people move it, and near the bottom of
+      the screen the list would otherwise run off the window.
+    */
+    const r = face.getBoundingClientRect();
+    const h = list.offsetHeight;
+    const below = window.innerHeight - r.bottom;
+    list.style.left = Math.max(8, Math.min(r.left, window.innerWidth - list.offsetWidth - 8)) + "px";
+    list.style.top = (below >= h + 8 ? r.bottom + 4 : Math.max(8, r.top - h - 4)) + "px";
+    face.setAttribute("aria-expanded", "true");
+    fitOpen = { face: face, list: list };
+    const first = list.querySelector(".fit-item");
+    if (first) first.focus();
+  };
+
+  face.onclick = open;
+  face.onkeydown = e => {
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") { e.preventDefault(); open(); }
+  };
+}
+
+/*
+  Walking the list and leaving it. The handlers are shared rather than per row:
+  the list lives from one press to one choice, and hanging three listeners on
+  every row each time is work for nothing.
+*/
+document.addEventListener("keydown", e => {
+  if (!fitOpen) return;
+  const items = [...fitOpen.list.querySelectorAll(".fit-item")];
+  const at = items.indexOf(document.activeElement);
+  if (e.key === "Escape") { e.preventDefault(); const f = fitOpen.face; closeFit(); f.focus(); return; }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    const next = items[(at + step + items.length) % items.length];
+    if (next) next.focus();
+    return;
+  }
+  if (e.key === "Enter" || e.key === " ") {
+    if (at >= 0) { e.preventDefault(); items[at].click(); }
+  }
+}, true);
+addEventListener("pointerdown", e => {
+  if (fitOpen && !fitOpen.list.contains(e.target) && e.target !== fitOpen.face) closeFit();
+});
+// The list stands where the button stands: move the button and the list points
+// at nothing.
+addEventListener("scroll", closeFit, true);
+addEventListener("resize", closeFit);
 
 function paintTraceValues() {
   const live = opt.trace && cursor && data.trace;
@@ -1396,6 +2343,361 @@ function paintTraceValues() {
   });
 }
 
+/*
+  DATA SERIES. Points out of a table or a csv.
+
+  A series is an INPUT, not a curve. On the canvas it is drawn as points; what
+  becomes a curve is the formula fitted to it by regression, and that formula is
+  an ordinary one - everything else works with it for free: extrema,
+  intersections, the report, bookmarks.
+
+  Why a series was not made a curve in its own right: the engine takes a formula
+  string and nothing else, there is no way to hand it ready points. Teaching the
+  engine such a curve means editing the shared library in 0-foundation, which
+  other products take as well; computing the data on the page means a second
+  implementation of the same analysis, and in this project two implementations
+  of one parser have already drifted apart once.
+
+  The argument that makes the loss a small one: the extrema of a raw series are
+  noise. Every bump of the measurement would give a mark, and a person would get
+  a hundred marks about nothing. The extremum of a fitted curve means something.
+*/
+const series = [];
+const SeriesLimit = 20000;
+
+/*
+  Take the preview off: both the series and the curves marked by the editor.
+
+  A function of its own rather than two lines in place, because it is called
+  from three different places - the preview, the adoption and the clearing - and
+  those three ways of taking it off must not drift apart.
+*/
+let previewOf = null;
+
+function dropPreview() {
+  for (let i = curves.length - 1; i >= 0; i--)
+    if (curves[i].editor) curves.splice(i, 1);
+  for (let i = series.length - 1; i >= 0; i--)
+    if (series[i].editor) series.splice(i, 1);
+  // The mark "this has already been shown" comes off along with the preview.
+  // Otherwise a person who cleared the panel and selected the same block again
+  // would see nothing: the cut-off for repeats would count the selection as old.
+  previewOf = null;
+}
+
+function addSeries(table, preview) {
+  if (!table || !table.points || table.points.length < 2) return;
+  // The ceiling on the number of points is said out loud, and so is the cut:
+  // to take the first twenty thousand silently and draw them as the whole
+  // series is to lie about the data.
+  const cut = table.points.length > SeriesLimit;
+  series.push({
+    name: table.name || ("series " + (series.length + 1)),
+    points: cut ? table.points.slice(0, SeriesLimit) : table.points,
+    cut: cut, skipped: table.skipped || 0, sep: table.sep, on: true,
+    editor: !!preview
+  });
+  // A preview does not count as an intention of the person: it does not undo
+  // the fact that the list was emptied on purpose, and it goes away by itself
+  // with the next selection.
+  if (!preview) emptiedByUser = false;
+  drawPanel();
+  paint();
+}
+
+/*
+  REGRESSION: a formula is fitted to a series of points.
+
+  The result is a FORMULA STRING. It goes into the same list as any other, and
+  from there everything already written works on it: building, tracing, extrema,
+  the report, bookmarks, the share link. Only the fitting is written here; the
+  output half comes free - that is why it is arranged this way.
+
+  Five kinds, all of them least squares:
+
+      straight line   y = a*x + b        a closed formula
+      polynomial      of degree 2..5     normal equations + Gauss
+      exponential     y = a*exp(b*x)     reduced to a line by substitution
+      power           y = a*x^b          the same, on two logarithms
+      logarithmic     y = a*ln(x) + b    the same, on one
+
+  WHAT HAS TO BE SAID TO THE PERSON BESIDE THE ANSWER, not in documentation:
+
+    R^2 grows with the number of coefficients by itself. A polynomial of high
+      degree will pass through every point and mean nothing
+    the exponential, the power and the logarithmic fits are computed through
+      logarithms, and then it is the deviation of the LOGARITHMS that is
+      minimised, not of the values. That is not the same thing as an honest
+      non-linear fit
+    least squares is sensitive to outliers: one point pulls the whole curve
+
+  A note is returned - that very caveat, and the caller is obliged to show it.
+
+  A POWER is written out as products (a*X*X), and the exponential through Exp
+  and Ln. The sign ^ in this parser means EXCLUSIVE OR, not raising to a power:
+  a formula like X^2 would parse and would give a quite different curve -
+  silently.
+*/
+function fitSeries(points, kind, degree) {
+  const pts = (points || []).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (pts.length < 2) return { error: "fewer than two points, nothing to fit" };
+
+  const dec = Math.max(3, Math.min(10, opt.decimals != null ? opt.decimals : 6));
+  const fmt = v => {
+    if (!Number.isFinite(v)) return "0";
+    const s = (+v).toFixed(dec).replace(/0+$/, "").replace(/\.$/, "");
+    return s === "-0" ? "0" : s;
+  };
+  // A signed term: "a*X" and " - 1.5" instead of "a*X + -1.5".
+  const term = (v, tail) => (v < 0 ? " - " : " + ") + fmt(Math.abs(v)) + (tail || "");
+
+  /*
+    The measure of agreement is computed on the ORIGINAL values, not on the
+    transformed ones.
+
+    For the exponential and the power fit the fitting runs on logarithms, and
+    R^2 in logarithms would come out prettier than the true one. To show
+    prettier than true is to lie in the direction a person would like to
+    believe.
+  */
+  const quality = f => {
+    let ssRes = 0, ssTot = 0, mean = 0, n = 0;
+    for (const p of pts) { mean += p.y; n++; }
+    mean /= n;
+    for (const p of pts) {
+      const v = f(p.x);
+      if (!Number.isFinite(v)) return null;
+      ssRes += (p.y - v) * (p.y - v);
+      ssTot += (p.y - mean) * (p.y - mean);
+    }
+    // Constant y: there is no spread at all, and the share explained is zero
+    // over zero.
+    if (!(ssTot > 0)) return { r2: null, ssRes: ssRes };
+    return { r2: 1 - ssRes / ssTot, ssRes: ssRes };
+  };
+
+  // Gaussian elimination with the pivot chosen down the column.
+  const solve = (A, b) => {
+    const n = b.length;
+    for (let i = 0; i < n; i++) {
+      let big = i;
+      for (let k = i + 1; k < n; k++)
+        if (Math.abs(A[k][i]) > Math.abs(A[big][i])) big = k;
+      if (Math.abs(A[big][i]) < 1e-300) return null;
+      if (big !== i) { const t = A[i]; A[i] = A[big]; A[big] = t;
+                       const s = b[i]; b[i] = b[big]; b[big] = s; }
+      for (let k = i + 1; k < n; k++) {
+        const f = A[k][i] / A[i][i];
+        if (!f) continue;
+        for (let j = i; j < n; j++) A[k][j] -= f * A[i][j];
+        b[k] -= f * b[i];
+      }
+    }
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      let s = b[i];
+      for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j];
+      x[i] = s / A[i][i];
+    }
+    return x.every(Number.isFinite) ? x : null;
+  };
+
+  // Fitting a line to pairs (u, v) - the common brick under every substitution.
+  const line = pairs => {
+    let n = 0, su = 0, sv = 0, suu = 0, suv = 0;
+    for (const [u, v] of pairs) {
+      if (!Number.isFinite(u) || !Number.isFinite(v)) continue;
+      n++; su += u; sv += v; suu += u * u; suv += u * v;
+    }
+    if (n < 2) return null;
+    const d = n * suu - su * su;
+    if (!(Math.abs(d) > 0)) return null;   // all u the same - there is no slope
+    return { a: (n * suv - su * sv) / d, b: (suu * sv - su * suv) / (d) };
+  };
+
+  const NoteLog = "the fit runs on logarithms, so what comes out least is the "
+    + "deviation of the logarithms, not of the values themselves";
+  const NoteOutliers = "least squares is sensitive to outliers: "
+    + "one distant point pulls the whole curve";
+
+  if (kind === "line") {
+    const r = line(pts.map(p => [p.x, p.y]));
+    if (!r) return { error: "all the points stand on one vertical, no line to draw" };
+    const f = x => r.a * x + r.b;
+    return { text: fmt(r.a) + " * X" + term(r.b), quality: quality(f),
+             note: NoteOutliers };
+  }
+
+  if (kind === "poly") {
+    const deg = Math.max(2, Math.min(5, degree | 0));
+    if (pts.length < deg + 1)
+      return { error: "fewer points than coefficients: the fit needs at least " + (deg + 1) };
+    /*
+      x is centred and scaled BEFORE the fit.
+
+      A Vandermonde matrix is ill-conditioned by itself, and on original x with
+      large values it degenerates altogether: the powers run apart by orders of
+      magnitude, and the solution comes out of the noise. After the fit the
+      coefficients are expanded back into X by the binomial - otherwise a person
+      would get a formula in (X-m)/s, which there is no point in reading.
+    */
+    let lo = Infinity, hi = -Infinity, mean = 0;
+    for (const p of pts) { lo = Math.min(lo, p.x); hi = Math.max(hi, p.x); mean += p.x; }
+    mean /= pts.length;
+    const scale = hi > lo ? (hi - lo) / 2 : 1;
+    const n = deg + 1;
+    const A = [], bb = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) A.push(new Array(n).fill(0));
+    for (const p of pts) {
+      const u = (p.x - mean) / scale;
+      const pw = [1];
+      for (let k = 1; k <= 2 * deg; k++) pw.push(pw[k - 1] * u);
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) A[i][j] += pw[i + j];
+        bb[i] += pw[i] * p.y;
+      }
+    }
+    const c = solve(A, bb);
+    if (!c) return { error: "the system is degenerate: these points do not define a polynomial of that degree" };
+
+    // Expanding back into X: sum c_k * ((X-m)/s)^k -> sum a_j * X^j.
+    const binom = (k, j) => { let r = 1; for (let t = 0; t < j; t++) r = r * (k - t) / (t + 1); return r; };
+    const a = new Array(n).fill(0);
+    for (let k = 0; k < n; k++)
+      for (let j = 0; j <= k; j++)
+        a[j] += c[k] * binom(k, j) * Math.pow(-mean, k - j) / Math.pow(scale, k);
+
+    const f = x => { let s = 0; for (let j = n - 1; j >= 0; j--) s = s * x + a[j]; return s; };
+    let text = "";
+    for (let j = n - 1; j >= 1; j--) {
+      const body = " * X" + " * X".repeat(j - 1);
+      text += (text ? term(a[j], body) : fmt(a[j]) + body);
+    }
+    text += term(a[0]);
+    return { text: text, quality: quality(f),
+             note: "R^2 grows with the number of coefficients by itself: a "
+                 + "polynomial of high degree will pass through every point and "
+                 + "will mean nothing. " + NoteOutliers };
+  }
+
+  if (kind === "exp") {
+    // y = a*exp(b*x): ln y = ln a + b*x. Positive y are needed.
+    const good = pts.filter(p => p.y > 0);
+    if (good.length < 2)
+      return { error: "the exponential needs positive y, and there are fewer than two" };
+    const r = line(good.map(p => [p.x, Math.log(p.y)]));
+    if (!r) return { error: "all the points stand on one vertical" };
+    const a = Math.exp(r.b), b = r.a;
+    const f = x => a * Math.exp(b * x);
+    return { text: fmt(a) + " * Exp(" + fmt(b) + " * X)", quality: quality(f),
+             note: NoteLog + ". " + (good.length < pts.length
+               ? "points with non-positive y skipped: " + (pts.length - good.length) + ". " : "")
+               + NoteOutliers };
+  }
+
+  if (kind === "power") {
+    // y = a*x^b: ln y = ln a + b*ln x. Both x and y must be positive.
+    const good = pts.filter(p => p.x > 0 && p.y > 0);
+    if (good.length < 2)
+      return { error: "the power fit needs positive x and y, and there are fewer than two such points" };
+    const r = line(good.map(p => [Math.log(p.x), Math.log(p.y)]));
+    if (!r) return { error: "all the points stand on one vertical" };
+    const a = Math.exp(r.b), b = r.a;
+    const f = x => (x > 0 ? a * Math.exp(b * Math.log(x)) : NaN);
+    /*
+      Written through Exp and Ln, not with the power sign: '^' in this parser is
+      exclusive OR. The formula X^2 would parse and would give a different curve
+      silently.
+    */
+    return { text: fmt(a) + " * Exp(" + fmt(b) + " * Ln(X))",
+             quality: quality(f.bind(null)),
+             note: NoteLog + ". the curve is defined only for X above zero. "
+                 + (good.length < pts.length
+                    ? "points outside that domain skipped: " + (pts.length - good.length) + ". " : "")
+                 + NoteOutliers };
+  }
+
+  if (kind === "log") {
+    // y = a*ln x + b. Positive x are needed.
+    const good = pts.filter(p => p.x > 0);
+    if (good.length < 2)
+      return { error: "the logarithmic fit needs positive x, and there are fewer than two" };
+    const r = line(good.map(p => [Math.log(p.x), p.y]));
+    if (!r) return { error: "all the points stand on one vertical" };
+    const f = x => (x > 0 ? r.a * Math.log(x) + r.b : NaN);
+    return { text: fmt(r.a) + " * Ln(X)" + term(r.b), quality: quality(f),
+             note: "the curve is defined only for X above zero. "
+                 + (good.length < pts.length
+                    ? "points outside that domain skipped: " + (pts.length - good.length) + ". " : "")
+                 + NoteOutliers };
+  }
+
+  return { error: "unknown kind of fit: " + kind };
+}
+
+/*
+  Fit a formula to a series and lay it down as a curve.
+
+  The result is an ordinary formula string, and from there everything already
+  written works on it. The caveat is shown BESIDE the result rather than hidden
+  in a tooltip: without it R^2 reads as a measure of truth, while it is a
+  measure of agreement, and it grows by itself with the number of coefficients.
+*/
+/*
+  A CAVEAT LIVES EXACTLY AS LONG AS THE CURVE IT EXPLAINS.
+
+  Reported with a screenshot on 17.08.2026: the list is cleared, "functions 0",
+  and the screen still carries a polynomial of the fifth degree and
+  R^2 = 0.9995. The caveat was explaining something that no longer exists
+  anywhere.
+
+  Hiding it in the handler of the clearing would have been a repair of ONE case
+  out of six: a curve is also removed by the cross, by undo, by the return of a
+  bookmark, by somebody else's snapshot, by a change of the coordinate system.
+  So the tie is named outright - the caveat remembers ITS OWN formula - and it
+  is checked in drawPanel, through which every change of the list passes. One
+  node instead of six handlers.
+
+  A message about a failed fit has no curve of its own: it holds until the first
+  change of the list and comes off by the same means.
+*/
+let fitNoteFor = null;
+
+function syncFitNote() {
+  const box = el("fitNote");
+  if (box.hidden) return;
+  if (fitNoteFor && curves.some(c => c.text === fitNoteFor)) return;
+  box.hidden = true;
+  fitNoteFor = null;
+}
+function applyFit(s, kind, degree) {
+  const box = el("fitNote");
+  const r = fitSeries(s.points, kind, degree);
+  if (r.error) {
+    fitNoteFor = null;
+    box.className = "fit-note bad";
+    box.textContent = "the fit did not work out: " + r.error;
+    box.hidden = false;
+    return;
+  }
+  // A new curve - nothing destructive here, but the list changes, and it has to
+  // be returnable to the person by the same means as always.
+  remember("formula fitted to series" + (s.name ? " " + s.name : ""));
+  curves.push({ text: r.text, on: true, trace: true, color: null, editor: false });
+  emptiedByUser = false;
+  const q = r.quality;
+  // One typeface for the whole paragraph: R^2 in the caption and R^2 in the
+  // caveat. A superscript next to a flat spelling reads as two different things.
+  const r2 = q && q.r2 !== null && q.r2 !== undefined
+    ? "R^2 = " + q.r2.toFixed(4)
+    : "R^2 has nothing to be computed from: the y values are constant, there is no spread";
+  box.className = "fit-note";
+  box.innerHTML = "<b>" + esc(r.text) + "</b><br>" + r2 + ". " + esc(r.note);
+  box.hidden = false;
+  fitNoteFor = r.text;
+  drawPanel();
+  build();
+}
 const marks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 function drawMarks() {
   const box = el("marks");
@@ -1404,14 +2706,39 @@ function drawMarks() {
     const b = document.createElement("button");
     b.textContent = i + 1;
     b.className = full ? "full" : "";
+    /*
+      Being occupied is a property of the STORAGE: is there something in the
+      slot. Restoring does not clear it, and one bookmark can be returned to as
+      many times as you like.
 
-    b.title = full ? "Restore state " + (i + 1) : "Save state " + (i + 1);
-    b.onclick = () => {
+      Before, being occupied was a property of the switch: click after click
+      went remember - restore - remember, while the storage itself did not
+      survive a load (BookmarkSlot erased the file of the slot). The remark in
+      issue #3 was about exactly this: "the user tacitly assumes it is
+      remembered".
+
+      The price of predictability is named honestly: a bookmark can no longer be
+      updated by a single click, there is a gesture for that. Both gestures are
+      written in the tooltip - without that, clearing would become secret
+      knowledge, and ten occupied slots with no way out would be a dead end.
+    */
+    b.title = full
+      ? "Restore state " + (i + 1)
+        + "\nCtrl+click - write over, Shift+click - clear"
+      : "Remember state " + (i + 1);
+    b.onclick = e => {
+      // Shift before Ctrl: both held down means clearing, which makes more
+      // sense than writing over. On an empty slot there is nothing to clear,
+      // and saving silently instead of clearing would be the worst of the
+      // answers - better to do nothing.
+      let mode = "save";
+      if (full) mode = e.shiftKey ? "drop" : e.ctrlKey ? "save" : "load";
+      else if (e.shiftKey) return;
 
       b.classList.remove("pulse");
       void b.offsetWidth;
       b.classList.add("pulse");
-      send({ cmd: "bookmark", slot: i, mode: full ? "load" : "save" });
+      send({ cmd: "bookmark", slot: i, mode });
     };
     box.appendChild(b);
   });
@@ -1531,6 +2858,35 @@ function paint() {
         if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       }
       ctx.stroke();
+    });
+  });
+
+  /*
+    Data series are drawn as POINTS, not as a line, and that is not decoration.
+
+    A line between measurements lies: it draws values where nothing was
+    measured, and a person reads it as the behaviour of the quantity. Points say
+    exactly what there is - here are the measurements, and what lies between
+    them is unknown. It is for the sake of that difference that a series did not
+    become a curve: what becomes a curve is the fitted formula, and that one has
+    the right to run as a solid line.
+
+    They are drawn AFTER the curves: a fitted curve passes between the points,
+    and the points have to be visible on top of it, or there is nothing to judge
+    the quality of the fit by.
+  */
+  series.forEach((s, i) => {
+    if (!s.on) return;
+    ctx.fillStyle = css(palette[(curves.length + i) % palette.length]);
+    const r = Math.max(1.5, opt.penWidth + 1.2);
+    s.points.forEach(p => {
+      const px = toX(p.x, w), py = toY(p.y, h);
+      // Beyond the edge of the canvas nothing is drawn at all: on large series
+      // that is the bulk of the work.
+      if (px < -r || px > w + r || py < -r || py > h + r) return;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, 6.2831853);
+      ctx.fill();
     });
   });
 
@@ -1846,9 +3202,31 @@ document.querySelectorAll(".swatches").forEach(box => {
   box.onclick = e => {
     const b = e.target.closest("button");
     if (!b) return;
-    [...box.children].forEach(x => x.setAttribute("aria-pressed", String(x === b)));
 
     opt.penColor = palette[[...box.children].indexOf(b)] || palette[0];
+    /*
+      And the same click takes off "a colour of its own for every formula".
+
+      While that mark is set, penColor is not used at all: drawing takes tone(i).
+      That is, the choice of a colour looked as if it had been made and changed
+      nothing - the remark in issue #3 word for word: "whichever one you pick,
+      the graph is drawn in a different colour".
+
+      Greying the swatches out while the mark is set would have been more honest
+      about the mechanics and worse in practice: a person will go looking for
+      why the choice is unavailable anyway. Let the choice simply work, and let
+      the mark come off by itself and in plain sight - the switch stands in the
+      same section, below.
+
+      The colour stays common to all the curves. Keeping it per curve means the
+      snapshot, the bookmarks and the sharing - separate work; the way there is
+      not closed.
+    */
+    opt.multicolor = false;
+    // The swatch is highlighted by syncControls from penColor, not by us from
+    // the button pressed: otherwise on an unknown colour one thing is
+    // highlighted and another one is in force.
+    syncControls();
     paint();
     sendOptions();
   };
@@ -1874,6 +3252,184 @@ function sendQuality() {
   clearTimeout(qualityTimer);
   sendOptions();
 }
+/*
+  THE POINT TABLE: the dialog of the web version.
+
+  The plugin has none and should have none - there the data comes from the
+  editor, and a second entrance to the same place would only confuse. The
+  web-only mark is handled below, at hello.
+
+  Why the dialog was needed at all. In a browser the page CANNOT take the system
+  clipboard by itself: reading it asks for permission, while in the plugin the
+  host reads it and sends a clipboard message. So Ctrl+V in a browser did
+  nothing - and rightly so: a page has no business looking into the clipboard
+  unasked. A paste event is another matter: there the text is brought by the
+  person's own keypress, and no permission is involved. Both roads lead to the
+  same place, see below.
+*/
+const dataSheet = el("dataSheet");
+const dataInput = el("dataInput");
+const dataMirror = el("dataMirror");
+const dataNote = el("dataNote");
+
+const DemoTable = "time;distance\n0.1;0.049\n0.2;0.196\n0.3;0.441\n"
+                + "0.4;0.785\n0.5;1.226\n0.6;1.766";
+
+/*
+  Highlighting. The mirror layer repeats the text of the field as markup.
+
+  What gets coloured is what a person has to decide by eye: where the header is,
+  what counts as a number and what does not. The separator is dimmed: it is
+  plumbing, and has no business catching the eye.
+
+  Whether a field is good is asked of tableNumber - of the same code that parses
+  the table. A check of its own here would be a second parser, and the first
+  disagreement between them would mean a field that lights up "good" on a line
+  the parser has thrown away.
+*/
+function markupTable(text, got) {
+  const sep = got ? got.sep : ";";
+  const head = got && got.header ? got.header.join(sep) : null;
+  const out = [];
+  const lines = String(text).split(/\r?\n/);
+  for (const line of lines) {
+    const bare = line.trim();
+    if (!bare) { out.push(""); continue; }
+    if (bare.startsWith("#") || bare.startsWith("//")) {
+      out.push('<i class="tk-sep">' + esc(line) + "</i>");
+      continue;
+    }
+    if (head !== null && bare === head) {
+      out.push('<i class="tk-head">' + esc(line) + "</i>");
+      continue;
+    }
+    const parts = sep === " " ? line.split(/(\s+)/) : line.split(sep);
+    const numbers = parts.filter((p, i) => sep === " " ? i % 2 === 0 : true)
+      .filter(p => tableNumber(p) !== null).length;
+    if (numbers < 2) { out.push('<i class="tk-bad">' + esc(line) + "</i>"); continue; }
+    const marked = [];
+    parts.forEach((part, i) => {
+      if (sep === " " && i % 2) { marked.push('<i class="tk-sep">' + esc(part) + "</i>"); return; }
+      marked.push(tableNumber(part) !== null
+        ? '<i class="tk-num">' + esc(part) + "</i>"
+        : '<i class="tk-bad">' + esc(part) + "</i>");
+    });
+    out.push(marked.join(sep === " " ? "" : '<i class="tk-sep">' + esc(sep) + "</i>"));
+  }
+  // The trailing newline is needed, or the last line of the mirror does not
+  // scroll with the field and its highlighting lags a line behind.
+  return out.join("\n") + "\n";
+}
+
+const SepName = { ";": "semicolon", "\t": "tab", ",": "comma", " ": "space" };
+
+/*
+  Agreeing a number with a word. "1 lines skipped" reads as an unfinished job,
+  and the first screenshot showed it. English needs two of the three forms only,
+  and they are passed the same word; the shape is kept because the counting rule
+  belongs to the language, not to this dialog.
+*/
+function plural(n, one, few, many) {
+  const t = Math.abs(n) % 100, d = t % 10;
+  if (t > 10 && t < 20) return many;
+  if (d === 1) return one;
+  if (d >= 2 && d <= 4) return few;
+  return many;
+}
+
+function refreshTable() {
+  const text = dataInput.value;
+  const got = parseTable(text);
+  dataMirror.innerHTML = markupTable(text, got);
+  dataMirror.scrollTop = dataInput.scrollTop;
+  dataMirror.scrollLeft = dataInput.scrollLeft;
+  el("dataOk").disabled = !got;
+  if (!text.trim()) {
+    dataNote.className = "sheet-note";
+    dataNote.textContent = "";
+    return;
+  }
+  if (!got) {
+    dataNote.className = "sheet-note bad";
+    dataNote.textContent = "Not readable yet: two lines at least, "
+      + "and two numbers in each.";
+    return;
+  }
+  const bits = ["<b>" + got.points.length + "</b> " + plural(got.points.length, "point", "points", "points"),
+                "separator - " + (SepName[got.sep] || got.sep)];
+  if (got.header) bits.push("header: " + got.header.slice(0, 2).join(", "));
+  if (got.skipped)
+    bits.push("<b>" + got.skipped + "</b> "
+            + plural(got.skipped, "line", "lines", "lines") + " skipped");
+  dataNote.className = "sheet-note";
+  dataNote.innerHTML = bits.join(" · ");
+}
+
+function openTable(text) {
+  el("dataBack").hidden = false;
+  dataSheet.hidden = false;
+  if (text !== undefined) dataInput.value = text;
+  refreshTable();
+  dataInput.focus();
+  dataInput.setSelectionRange(dataInput.value.length, dataInput.value.length);
+}
+
+function closeTable() {
+  dataSheet.hidden = true;
+  el("dataBack").hidden = true;
+  el("dataBtn").focus();
+}
+
+dataInput.addEventListener("input", refreshTable);
+// The two layers scroll together: let them part and the highlighting drifts off
+// the text.
+dataInput.addEventListener("scroll", () => {
+  dataMirror.scrollTop = dataInput.scrollTop;
+  dataMirror.scrollLeft = dataInput.scrollLeft;
+});
+dataInput.addEventListener("keydown", e => {
+  // Ctrl+Enter builds without taking the hands off the keyboard. Enter inside
+  // the field is a line break, and a multi-line input cannot have that taken
+  // away.
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); takeTable(); }
+});
+
+function takeTable() {
+  const got = parseTable(dataInput.value);
+  if (!got) return;
+  addSeries(got);
+  closeTable();
+}
+
+el("dataBtn").onclick = () => openTable();
+el("dataClose").onclick = closeTable;
+el("dataCancel").onclick = closeTable;
+el("dataBack").onclick = closeTable;
+el("dataOk").onclick = takeTable;
+el("dataDemo").onclick = () => { dataInput.value = DemoTable; refreshTable(); dataInput.focus(); };
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !dataSheet.hidden) { e.preventDefault(); closeTable(); }
+});
+
+/*
+  Pasting outside the dialog: a person pressed Ctrl+V on the panel itself.
+
+  The event brings the text with it and asks no permission - and it has to behave
+  the same way as a paste into the dialog. If what came is a table, the dialog
+  OPENS with it inside rather than building in silence: what was pasted should be
+  seen before it turns into points.
+*/
+document.addEventListener("paste", e => {
+  if (el("dataBtn").hidden) return;          // the plugin has no such road
+  const inField = e.target && (e.target.tagName === "INPUT"
+                            || e.target.tagName === "TEXTAREA");
+  if (inField) return;
+  const text = (e.clipboardData || {}).getData ? e.clipboardData.getData("text") : "";
+  if (!text || !parseTable(text)) return;
+  e.preventDefault();
+  openTable(text);
+});
 el("gearBtn").onclick = () => el("drawer").classList.toggle("open");
 el("closeDrawer").onclick = () => el("drawer").classList.remove("open");
 
@@ -1889,9 +3445,85 @@ function commitField() {
 el("draw").onclick = () => { commitField(); build(); };
 el("refresh").onclick = build;
 
+/*
+  UNDO - one mechanism for everything destructive, not a question on every
+  button.
+
+  A confirmation on a frequently pressed button is an irritation, people stop
+  reading it, and it does not save them anyway: a person clicks "yes" without
+  looking. A rollback is cheaper for him and more honest: the action happens at
+  once, and it can be taken back.
+
+  The snapshot is taken BEFORE the action and whole - it is the same state()
+  that goes into a bookmark, into the session and into the share link. So undo
+  brings back not only the list of formulas, but the coordinate system, the
+  view, the settings and the shelf of the neighbouring system as well. Undo has
+  no separate description of the state of its own - it would have drifted apart
+  from the others.
+
+  WHAT UNDO DOES NOT COVER, and this has to be said plainly: writing over a
+  bookmark slot. The slot lives at the host, the page does not see its contents
+  and cannot bring them back. Writing over has at least stopped being accidental
+  - it is a separate gesture now (Ctrl+click) - but it cannot be undone.
+*/
+const undoStack = [];
+const UndoDepth = 20;
+
+function remember(what) {
+  undoStack.push({ what: what, snap: state() });
+  // The depth is bounded: a snapshot carries every formula and setting, and the
+  // panel lives inside an editor for weeks. Twenty steps is plenty, and the
+  // memory does not grow.
+  if (undoStack.length > UndoDepth) undoStack.shift();
+  syncUndo();
+}
+
+function syncUndo() {
+  const b = el("undoBtn");
+  const last = undoStack[undoStack.length - 1];
+  b.disabled = !last;
+  // The tooltip names WHAT exactly will be undone: "undo" with no object makes
+  // a person press at random and look at what came out.
+  b.title = last ? "Undo: " + last.what : "Nothing to undo";
+}
+
+function undo() {
+  const last = undoStack.pop();
+  if (!last) return;
+  applySnapshot(last.snap);
+  syncUndo();
+  build();
+}
+
+el("undoBtn").onclick = undo;
+/*
+  The state of the graph to the clipboard and back - the same actions that were
+  on the panel.
+
+  CLEARING TAKES OUT EVERYTHING IN THE LIST, not the formulas alone. Before, it
+  touched only the curves, and this is what came of it: a person opened a table,
+  pressed the bin - and the panel answered "functions 0" with a series row in
+  plain sight. And if there were no formulas at all, the bin did EXACTLY
+  NOTHING: `if (!curves.length) return`. A series could be removed only by the
+  cross in its own row, one at a time.
+
+  This is the same dead end the bookmarks had, and it is cured the same way - by
+  a way out that can be seen. The risk is taken by undo: the clearing took both
+  kinds of content, the snapshot is made before it, and both come back.
+
+  The caption of the button was changed along with the deed. "Clear the formula
+  list" promised less than the button does, and a promise and a deed have to
+  match - the same rule was applied to the print button in this very release.
+*/
 el("clearBtn").onclick = () => {
-  if (!curves.length) return;
+  if (!curves.length && !series.length) return;
+  remember("clearing of the panel");
+  // The mark of what has been shown comes off along with it: otherwise the same
+  // selection, touched in the editor after the clearing, would count as already
+  // shown and would not come back.
+  dropPreview();
   curves.length = 0;
+  series.length = 0;
   emptiedByUser = true;
   el("formula").value = "";
   data.seg = [];
@@ -1900,15 +3532,42 @@ el("clearBtn").onclick = () => {
   data.trace = null;
   drawPanel();
   paintTraceValues();
+  // The canvas is redrawn AT ONCE, not on the answer of the engine. The answer
+  // comes tens of milliseconds later, and all that while a person sees on the
+  // canvas what he has already taken away. And if the engine has nothing to
+  // answer to an empty list, it does not come at all.
+  paint();
   build();
 };
 
 el("copyBtn").onclick = () => send({ cmd: "copy", text: shareLink() });
 el("pasteBtn").onclick = () => send({ cmd: "paste" });
+/*
+  Printing the graph and the report.
 
+  The button used to OPEN the report window and print the page 200 ms later.
+  Two consequences follow from that, and the author of issue #3 noticed both:
+  only the visible part of the report was printed - the rest stayed beyond the
+  edge of a scrolling window - and the report itself could fail to arrive within
+  the time allowed.
+
+  Now the report is REQUESTED and printing goes on its arrival, not on a timer.
+  Opening the report window on the screen is no longer needed: the print rules
+  unfold it themselves. A fallback deadline is kept, but it is exactly a
+  fallback - if the host stays silent, a person gets at least the graph rather
+  than an empty wait.
+*/
+let printPending = false;
+
+function printNow() {
+  if (!printPending) return;
+  printPending = false;
+  window.print();
+}
 el("printBtn").onclick = () => {
-  if (!el("report").classList.contains("on")) el("reportBtn").click();
-  setTimeout(() => window.print(), 200);
+  printPending = true;
+  send({ cmd: "report" });
+  setTimeout(printNow, 1500);
 };
 
 el("fontBtn").onclick = () => send({ cmd: "signfont" });
@@ -1945,6 +3604,42 @@ el("themeBtn").onclick = () => {
   drawPanel();
   paint();
 };
+
+/*
+  On paper - the light theme, whatever the screen may be.
+
+  The canvas is drawn in the colours of the theme, and in the dark one it goes
+  to print as a black rectangle: the sheet is flooded with ink, and the thin
+  curves on it are barely visible. Print rules do not cure this - the colours
+  are already in the raster - so the theme is changed and the canvas redrawn
+  BEFORE the browser takes its picture of the page.
+
+  keepTheme is deliberately NOT called here: the substitution is temporary, and
+  remembering it as the person's choice is not allowed - otherwise the panel
+  would stay light for good after a print.
+*/
+let themeBeforePrint = null;
+
+addEventListener("beforeprint", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme === "dark"
+    || (!root.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+  if (!dark) return;
+  themeBeforePrint = root.dataset.theme || "";
+  root.dataset.theme = "light";
+  drawPanel();
+  paint();
+});
+
+addEventListener("afterprint", () => {
+  if (themeBeforePrint === null) return;
+  const root = document.documentElement;
+  if (themeBeforePrint) root.dataset.theme = themeBeforePrint;
+  else delete root.dataset.theme;
+  themeBeforePrint = null;
+  drawPanel();
+  paint();
+});
 
 const histAll = { rect: [], polar: [] };
 const HistLimit = 20;
@@ -2014,6 +3709,23 @@ el("histBtn").onclick = e => {
 
 document.addEventListener("click", () => histShow(false));
 document.addEventListener("keydown", e => { if (e.key === "Escape") histShow(false); });
+
+/*
+  Ctrl+Z undoes the last destructive action - the same place the button does it.
+
+  In an input field, and in any other editable place, the combination is NOT
+  intercepted: there it belongs to editing text, and taking it away would mean
+  breaking the habitual for the sake of the new. A person typing a formula
+  expects the typing to be undone, not the erased list to come back.
+*/
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey) return;
+  if (String(e.key).toLowerCase() !== "z") return;
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  e.preventDefault();
+  undo();
+});
 el("hist").addEventListener("click", e => e.stopPropagation());
 
 histLoad();
