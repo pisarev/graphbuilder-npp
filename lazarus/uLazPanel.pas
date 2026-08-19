@@ -247,11 +247,11 @@ begin
   FKeepRatio := PageKeepRatio;
   FPenColor := PagePenColor;
   FGraph := TGraph.Create(Self);
-  SeedPageDefaults(FGraph);
   FGraph.Parent := Self;
   FGraph.SetBounds(0, 0, ClientWidth, ClientHeight);
   FGraph.HandleNeeded;
   FGraph.Silent := True;
+  SeedPageDefaults(FGraph);
   FGraph.Visible := False;
   FGraph.OnOverlap := GraphOverlap;
   FGraph.OnExtreme := GraphExtreme;

@@ -1481,7 +1481,6 @@ begin
   FTraceList := TFastList.Create;
   FTraceList.IndexTypes := [ttNameValue, ttName];
   FGraph := TGraph.Create(Self);
-  SeedPageDefaults(FGraph);
   FGraph.Name := GraphName;
   FGraph.OnOffsetChange := OffsetChange;
   FGraph.OnTraceDone := TraceDone;
@@ -1489,6 +1488,7 @@ begin
   FGraph.OnPolarTrace := PolarTrace;
   FGraph.Parent := pGraph;
   FGraph.Align := alClient;
+  SeedPageDefaults(FGraph);
   gFormula.CellEvent := CellEvent;
   for I := Low(TCoordinateSystem) to High(TCoordinateSystem) do
     SaveState(GetEnumName(TypeInfo(TCoordinateSystem), Ord(I)), False, @I);

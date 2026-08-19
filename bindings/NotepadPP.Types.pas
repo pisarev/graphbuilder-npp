@@ -10,10 +10,12 @@ unit NotepadPP.Types;
 
 {$IFDEF FPC}
   {$MODE DELPHI}
-  {$PACKRECORDS C}
 {$ENDIF}
 {$MINENUMSIZE 4}
 {$ALIGN ON}
+{$IFDEF FPC}
+  {$PACKRECORDS C}
+{$ENDIF}
 
 interface
 
