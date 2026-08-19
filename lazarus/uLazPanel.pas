@@ -98,6 +98,28 @@ type
 var
   Panel: TLazPanel = nil;
 
+const
+  PageZoomIn = 0.1;
+  PageZoomOut = 0.1;
+  PageQuality = 18;
+  PageAccuracy = 1;
+  PagePenWidth = 1;
+  PageDecimals = 6;
+  PageHSpacing = 1;
+  PageVSpacing = 1;
+  PagePolarAngle = 360;
+  PageCalcTime = 5000;
+  PageOverlapTime = 1000;
+  PageOverlapDepth = 16;
+  PageMarkSpacing = 14;
+  PageSignLayout = 1;
+  PageSignMargin = 16;
+  PageSignBlend = 235;
+  PageKeepRatio = True;
+  PagePenColor = '--c1';
+
+procedure SeedPageDefaults(const Graph: TGraph);
+
 implementation
 
 uses uLazPlugin, uShare;
@@ -106,8 +128,6 @@ const
   MaxSegmentPoints = 6000;
   DoneCheck = 40;
   BusyReply = '{"type":"busy"}';
-  DefaultKeepRatio = True;
-  DefaultPenColor = '--c1';
   WaitLimit = 15000;
   NoRuntime = 'The panel is drawn by the Microsoft Edge WebView2 runtime, ' +
     'and it is not present in the system. On Windows 11 it is standard; on Windows 10 it comes ' +
@@ -191,6 +211,27 @@ begin
   LogStep('docking: the panel moved to a hidden tab');
 end;
 
+procedure SeedPageDefaults(const Graph: TGraph);
+begin
+  if not Assigned(Graph) then Exit;
+  Graph.ZoomInFactor := PageZoomIn;
+  Graph.ZoomOutFactor := PageZoomOut;
+  Graph.Quality := PageQuality;
+  Graph.Accuracy := PageAccuracy;
+  Graph.GraphPen.Width := PagePenWidth;
+  Graph.PrecisionFormat := '0.' + StringOfChar('#', PageDecimals);
+  Graph.HSpacing := PageHSpacing;
+  Graph.VSpacing := PageVSpacing;
+  Graph.PolarMaxAngle := DegToRad(PagePolarAngle);
+  Graph.ThreadWorkTime := PageCalcTime;
+  Graph.OverlapMaxTime := PageOverlapTime;
+  Graph.OverlapMaxDepth := PageOverlapDepth;
+  Graph.MarkSpacing := PageMarkSpacing;
+  Graph.SignLayout := TLayoutType(PageSignLayout);
+  Graph.SignMargin := PageSignMargin;
+  Graph.SignBlendValue := PageSignBlend;
+end;
+
 constructor TLazPanel.Create(NppParent: TNppPlugin; DlgId: Integer);
 begin
   inherited Create(NppParent, DlgId);
@@ -203,9 +244,10 @@ begin
   OnFloatDropped := DockDropped;
   OnSwitchIn := DockSwitchIn;
   OnSwitchOff := DockSwitchOff;
-  FKeepRatio := DefaultKeepRatio;
-  FPenColor := DefaultPenColor;
+  FKeepRatio := PageKeepRatio;
+  FPenColor := PagePenColor;
   FGraph := TGraph.Create(Self);
+  SeedPageDefaults(FGraph);
   FGraph.Parent := Self;
   FGraph.SetBounds(0, 0, ClientWidth, ClientHeight);
   FGraph.HandleNeeded;

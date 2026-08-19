@@ -1079,6 +1079,13 @@ const opt = {
   hSpacing: 1, vSpacing: 1, polarAngle: 360,
   calcTime: 5000, overlapTime: 1000, overlapDepth: 16,
 
+  /*
+    The plugin's own zoom step. The component defaults to 0.5, and that number
+    plays no part here: the host seeds these values into the component when it is
+    created, so both builds open the same. Until 19 August the Delphi build sent
+    the page a snapshot of the component instead, and its wheel zoomed in steps
+    of 0.5 against 0.1 in the Lazarus build.
+  */
   zoomIn: 0.1, zoomOut: 0.1,
   penColor: "--c1",
   

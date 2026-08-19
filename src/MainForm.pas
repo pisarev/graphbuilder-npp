@@ -398,9 +398,10 @@ var
 implementation
 
 uses
-  ClipboardMonitor, DarkTheme, ReportFacts, Math, TypInfo, Types, CalcUtils, CrossGraph.Geometry,
-  CrossVision.Geometry.Types, MemoryUtils, Parser, ParseTypes, StrUtils, TextBuilder,
-  TextConsts, TextUtils, ValueTypes, ValueUtils, ZUtils, NumberUtils;
+  ClipboardMonitor, DarkTheme, ReportFacts, WebPanel, Math, TypInfo, Types, CalcUtils,
+  CrossGraph.Geometry, CrossVision.Geometry.Types, MemoryUtils, Parser, ParseTypes,
+  StrUtils, TextBuilder, TextConsts, TextUtils, ValueTypes, ValueUtils, ZUtils,
+  NumberUtils;
 
 {$R *.dfm}
 
@@ -1480,6 +1481,7 @@ begin
   FTraceList := TFastList.Create;
   FTraceList.IndexTypes := [ttNameValue, ttName];
   FGraph := TGraph.Create(Self);
+  SeedPageDefaults(FGraph);
   FGraph.Name := GraphName;
   FGraph.OnOffsetChange := OffsetChange;
   FGraph.OnTraceDone := TraceDone;

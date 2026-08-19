@@ -88,6 +88,28 @@ type
 
 function UiFile: string;
 
+const
+  PageZoomIn = 0.1;
+  PageZoomOut = 0.1;
+  PageQuality = 18;
+  PageAccuracy = 1;
+  PagePenWidth = 1;
+  PageDecimals = 6;
+  PageHSpacing = 1;
+  PageVSpacing = 1;
+  PagePolarAngle = 360;
+  PageCalcTime = 5000;
+  PageOverlapTime = 1000;
+  PageOverlapDepth = 16;
+  PageMarkSpacing = 14;
+  PageSignLayout = 1;
+  PageSignMargin = 16;
+  PageSignBlend = 235;
+  PageKeepRatio = True;
+  PagePenColor = '--c1';
+
+procedure SeedPageDefaults(const Graph: TGraph);
+
 implementation
 
 uses Vcl.ActnList, Vcl.Clipbrd, ReportFacts, Share;
@@ -95,8 +117,6 @@ uses Vcl.ActnList, Vcl.Clipbrd, ReportFacts, Share;
 const
   DoneCheck = 40;
   Digits = 5;
-  DefaultKeepRatio = True;
-  DefaultPenColor = '--c1';
   BookmarkCount = 10;
 
 function FindAction(const Host: TWinControl; const Name: string): TCustomAction;
@@ -137,14 +157,35 @@ begin
   Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
 end;
 
+procedure SeedPageDefaults(const Graph: TGraph);
+begin
+  if not Assigned(Graph) then Exit;
+  Graph.ZoomInFactor := PageZoomIn;
+  Graph.ZoomOutFactor := PageZoomOut;
+  Graph.Quality := PageQuality;
+  Graph.Accuracy := PageAccuracy;
+  Graph.GraphPen.Width := PagePenWidth;
+  Graph.PrecisionFormat := '0.' + StringOfChar('#', PageDecimals);
+  Graph.HSpacing := PageHSpacing;
+  Graph.VSpacing := PageVSpacing;
+  Graph.PolarMaxAngle := DegToRad(PagePolarAngle);
+  Graph.ThreadWorkTime := PageCalcTime;
+  Graph.OverlapMaxTime := PageOverlapTime;
+  Graph.OverlapMaxDepth := PageOverlapDepth;
+  Graph.MarkSpacing := PageMarkSpacing;
+  Graph.SignLayout := TLayoutType(PageSignLayout);
+  Graph.SignMargin := PageSignMargin;
+  Graph.SignBlendValue := PageSignBlend;
+end;
+
 constructor TWebPanel.Create(const Host: TWinControl; const Graph: TGraph);
 begin
   inherited Create(Host);
   FHost := Host;
   FGraph := Graph;
   FKind := tkLight;
-  FKeepRatio := DefaultKeepRatio;
-  FPenColor := DefaultPenColor;
+  FKeepRatio := PageKeepRatio;
+  FPenColor := PagePenColor;
   FTimer := TTimer.Create(Self);
   FTimer.Enabled := False;
   FTimer.Interval := DoneCheck;

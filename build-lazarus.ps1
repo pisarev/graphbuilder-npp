@@ -26,7 +26,7 @@
   file resolves its source paths through $Env(WEBVIEW4DELPHI), and this script
   registers its Lazarus package for you.
 
-  Run: pwsh -File build-lazarus.ps1
+  Run: powershell -ExecutionPolicy Bypass -File build-lazarus.ps1
 #>
 
 param([switch]$Keep)

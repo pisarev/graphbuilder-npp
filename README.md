@@ -149,9 +149,13 @@ set WEBVIEW4DELPHI=%CD%\WebView4Delphi
 set LAZARUS_DIR=C:\lazarus
 
 cd graphbuilder-npp
-pwsh -File build-lazarus.ps1
-pwsh -File install.ps1
+powershell -ExecutionPolicy Bypass -File build-lazarus.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1
 ```
+
+The commands are for the PowerShell that ships with Windows; nothing here needs
+PowerShell 7. `-ExecutionPolicy Bypass` is what lets a downloaded script run
+under the default policy, and it holds for that one run only.
 
 The tag is worth keeping. WebView4Delphi carries its own `WebView2Loader.dll`,
 and the one beside a release comes from `1.0.4078.44`; the tip of the branch
@@ -203,18 +207,24 @@ it back. WebView4Delphi is not needed here.
 
 ```
 cd graphbuilder-npp
-pwsh -File build.ps1
-pwsh -File install.ps1 -Delphi
+powershell -ExecutionPolicy Bypass -File build.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1 -Delphi
 ```
 
 The switch is not optional on the second step: without it `install.ps1` looks for
 the Lazarus library and does not find it.
 
+`build.ps1` finds the studio itself: `BDS_BIN` if you set it, then the variable
+RAD Studio sets for its own command prompt, then the registry - the newest
+installed version whose `bin` holds `dcc64.exe`. Point `BDS_BIN` at a `bin`
+folder to pin one particular version.
+
 #### Delphi, by hand
 
 `dcc64` is not on the path by default. It sits in the `bin` folder of the
 installation - `C:\Program Files (x86)\Embarcadero\Studio\37.0\bin` for 13
-Florence - and `rsvars.bat` there puts it on the path of the current prompt.
+Florence, `23.0` for 12 Athens, `22.0` for 11 Alexandria - and `rsvars.bat`
+there puts it on the path of the current prompt.
 
 ```
 cd graphbuilder-npp
