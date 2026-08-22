@@ -66,6 +66,8 @@ type
     procedure RegisterModeless(const Window: HWND);
     procedure UnregisterModeless(const Window: HWND);
     property NppData: TNppData read FNppData;
+    function ShortcutText(const Index: Integer): string;
+    function AddToolbarIcon(const Index: Integer; const Icons: TToolbarIcons): Boolean;
     function NameForNpp: PWideChar;
     property PluginName: string read FPluginName write FPluginName;
     property ModuleName: string read FModuleName;
@@ -343,6 +345,38 @@ begin
       Id := Dark;
   Result := Id <> 0;
   if Result then SendMessage(FNppData.NppHandle, WM_COMMAND, WPARAM(Id), 0);
+end;
+
+function TNppPlugin.ShortcutText(const Index: Integer): string;
+var
+  Item: PFuncItem;
+  Key: TShortcutKey;
+  Letter: string;
+begin
+  Result := '';
+  Item := FuncItem[Index];
+  if not Assigned(Item) then Exit;
+  FillChar(Key, SizeOf(Key), 0);
+  if SendNpp(NPPM_GETSHORTCUTBYCMDID, WPARAM(Item.CmdID), LPARAM(@Key)) = 0 then Exit;
+  if Key.Key = #0 then Exit;
+  if Key.IsCtrl then Result := Result + 'Ctrl+';
+  if Key.IsAlt then Result := Result + 'Alt+';
+  if Key.IsShift then Result := Result + 'Shift+';
+  Letter := Char(Byte(Key.Key));
+  Result := Result + UpperCase(Letter);
+end;
+
+function TNppPlugin.AddToolbarIcon(const Index: Integer; const Icons: TToolbarIcons): Boolean;
+var
+  Item: PFuncItem;
+  Handles: TToolbarIcons;
+begin
+  Result := False;
+  Item := FuncItem[Index];
+  if not Assigned(Item) then Exit;
+  if (Icons.ToolbarBmp = 0) or (Icons.ToolbarIcon = 0) or (Icons.ToolbarIconDarkMode = 0) then Exit;
+  Handles := Icons;
+  Result := SendNpp(NPPM_ADDTOOLBARICON_FORDARKMODE, WPARAM(Item.CmdID), LPARAM(@Handles)) <> 0;
 end;
 
 function TNppPlugin.NameForNpp: PWideChar;

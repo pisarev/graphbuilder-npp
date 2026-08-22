@@ -169,8 +169,40 @@ try {
         }
     }
 
+
+    <#
+      An empty configuration does not know where Lazarus lives, and lazbuild
+      has nowhere else to learn it from: the line above promises it "takes it
+      from $LazDir" and nothing carried that promise into the call. On a
+      machine with no Lazarus configuration of its own - which is exactly the
+      stranger this script is written for - both calls failed with "invalid
+      Lazarus directory": directory lcl not found. The folder is therefore
+      named on the command line whenever the copy is empty.
+    #>
+    <#
+      The compiler has to be named too. An empty configuration knows no
+      compiler either, and lazbuild then walks its built-in list of guesses
+      and ends with "no proper compiler found" - a message that says nothing
+      about what is missing. FPC_EXE names it; without the variable the
+      folder of Lazarus is searched, which is where a bundled FPC lives.
+    #>
+    $Fpc = $env:FPC_EXE
+    if (-not $Fpc) {
+        $Fpc = Get-ChildItem (Join-Path $LazDir "fpc") -Filter "fpc.exe" -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+    }
+    if ($SrcPcp) {
+        $Where = @()
+    }
+    else {
+        if (-not $Fpc) {
+            throw "no configuration of Lazarus and no compiler found: set FPC_EXE to fpc.exe, or LAZARUS_PCP to your Lazarus configuration"
+        }
+        $Where = @("--lazarusdir=$LazDir", "--compiler=$Fpc")
+        Write-Host "    compiler for the empty copy: $Fpc"
+    }
     Write-Host "=== REGISTER $Lpk ==="
-    & $Laz --pcp="$Pcp" '--add-package-link' "$Lpk"
+    & $Laz --pcp="$Pcp" @Where '--add-package-link' "$Lpk"
     if ($LASTEXITCODE -ne 0) { throw "the package was not registered: $Lpk" }
 
 <#
@@ -187,7 +219,7 @@ try {
     }
 
     Write-Host '=== BUILD GraphBuilderLaz.dll (Lazarus/FPC, win64) ==='
-    & $Laz --pcp="$Pcp" $Proj
+    & $Laz --pcp="$Pcp" @Where $Proj
     if ($LASTEXITCODE -ne 0) { throw 'the build did not pass' }
 }
 finally {
@@ -228,6 +260,15 @@ else {
 $Ui = Join-Path $Here 'lazarus\bin\ui'
 New-Item -ItemType Directory -Force $Ui | Out-Null
 Copy-Item (Join-Path $Here 'web\index.html') $Ui -Force
+
+<#
+  The list of signs and functions travels beside the library, not inside ui.
+  The panel shows it on a button and the HOST reads the file: a page opened
+  from a file is not allowed to fetch its neighbour. Leave it out and the
+  panel shows whatever list the previous install left behind - the very
+  thing the list was introduced to prevent.
+#>
+Copy-Item (Join-Path $Here 'web\syntax.xml') (Join-Path $Here 'lazarus\bin') -Force
 
 Get-ChildItem (Join-Path $Here 'lazarus\bin') | Select-Object Name, Length |
     Format-Table -AutoSize

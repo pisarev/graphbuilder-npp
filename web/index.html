@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GraphBuilder - live demo</title>
+<title>Graph Builder</title>
 <style>
 :root {
   --bg: #f4f5f7;
@@ -61,6 +61,12 @@ button { border: 0; background: none; cursor: pointer; }
 
 .app { display: flex; flex-direction: column; height: 100%; }
 
+/*
+  The panel docks at the side of the editor, where a width of 300-500 px is an
+  ordinary thing. Without wrapping, the row of controls overflowed: the formula
+  field collapsed to an unreadable 19 px and the icons squeezed and stopped
+  being square.
+*/
 .bar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 9px 12px;
@@ -80,7 +86,7 @@ button { border: 0; background: none; cursor: pointer; }
 .csbtn[aria-pressed="true"] { color: var(--accent); }
 
 .field {
-  
+  /* The field must not shrink to nothing: below this limit a formula can no longer be read. */
   flex: 1 1 220px; display: flex; align-items: center; gap: 8px; min-width: 180px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 9px; padding: 0 6px 0 11px; height: 34px;
@@ -88,7 +94,7 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .field { position: relative; }
 .field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-
+/* The list of formulas entered before. One per coordinate system, as in the classic window. */
 .hist {
   position: absolute; top: calc(100% + 5px); right: 0; min-width: 240px; max-width: 100%;
   max-height: 260px; overflow: auto; z-index: 6; display: none;
@@ -123,7 +129,7 @@ button { border: 0; background: none; cursor: pointer; }
 .group[hidden] { display: none; }
 .icon-btn {
   display: grid; place-items: center; width: 30px; height: 30px;
-  
+  /* Without this the flex container squeezes the button in width and it stops being square. */
   flex: none;
   border-radius: 7px; color: var(--ink-dim); transition: all .13s ease;
 }
@@ -142,6 +148,7 @@ button { border: 0; background: none; cursor: pointer; }
   background: var(--line-soft); color: var(--ink-dim); font-size: 11px; line-height: 1.4; }
 .fit-note b { color: var(--ink); font-weight: 600; }
 .fit-note.bad { color: var(--c2); }
+
 /*
   The choice of fit. Its width comes from a MEASUREMENT, not from the eye.
 
@@ -274,20 +281,76 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .pf-row:hover { background: var(--accent-soft); }
 .pf-row.off { opacity: .5; }
-.pf-swatch { width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--glass); }
+/*
+  The circle in a formula row is a BUTTON: the look of that curve opens from it.
+  So it has the pointer cursor and a focus ring of its own for the keyboard;
+  without those it would look like an icon and nobody would click it.
+*/
+.pf-swatch {
+  width: 11px; height: 11px; border-radius: 50%; flex: none; padding: 0;
+  border: 0; box-shadow: 0 0 0 2px var(--glass);
+}
+/*
+  The pointer and the highlight belong to the button alone. A series of data has
+  a circle that looks the same, but it is NOT a button: a series has no look of
+  its own yet. A pointer over it would promise an action that will not follow -
+  and a promise with no action is worse than neither.
+*/
+button.pf-swatch { cursor: pointer; }
+button.pf-swatch:hover { box-shadow: 0 0 0 2px var(--glass), 0 0 0 3.5px var(--ink-faint); }
+button.pf-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pf-row.off .pf-swatch { box-shadow: inset 0 0 0 1.5px var(--ink-faint); background: transparent !important; }
+
+/* The look window of a curve: colour, width, dash. It keeps to its own row. */
+.pen-pop {
+  position: absolute; z-index: 60; padding: 10px; border-radius: 12px;
+  background: var(--glass); border: 1px solid var(--edge);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28); display: grid; gap: 8px;
+  min-width: 176px;
+}
+.pen-pop .cap { font-size: 11px; color: var(--ink-dim); }
+.pen-pop .inks { display: flex; gap: 6px; flex-wrap: wrap; }
+.pen-pop .inks button {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; padding: 0;
+}
+.pen-pop .inks button[aria-pressed="true"] { border-color: var(--ink); }
+.pen-pop .picks { display: flex; gap: 6px; }
+.pen-pop .picks button {
+  flex: 1; height: 26px; border-radius: 7px; border: 1px solid var(--edge);
+  background: transparent; cursor: pointer; display: grid; place-items: center;
+  color: var(--ink);
+}
+.pen-pop .picks button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.pen-pop .picks svg { width: 26px; height: 10px; }
+.pen-pop .reset {
+  height: 26px; border-radius: 7px; border: 1px solid var(--edge);
+  background: transparent; color: var(--ink-dim); cursor: pointer; font-size: 11px;
+}
 .pf-text {
   flex: 1; min-width: 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
   font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pf-row.off .pf-text { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+/*
+  The field for editing a formula right in the row. The metrics are the same as
+  those of the text beside it: family, size, line height. Let them differ and
+  the row will jump at the moment of the double click, and the person will
+  decide they missed.
+*/
+.pf-edit {
+  flex: 1; min-width: 0; height: 20px; padding: 0 4px;
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px;
+  color: var(--ink); background: var(--glass);
+  border: 1px solid var(--accent); border-radius: 5px; outline: none;
+}
 .pf-val {
   font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px;
   font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap;
   transition: opacity .12s ease;
 }
 .pf-val.dim { color: var(--ink-faint); }
-
+/* The controls appear on hover over a row, taking the place of the live value. */
 .pf-ctrls {
   position: absolute; right: 5px; display: flex; gap: 1px;
   opacity: 0; pointer-events: none; transition: opacity .12s ease;
@@ -350,26 +413,84 @@ canvas { display: block; width: 100%; height: 100%; }
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 7px 12px; background: var(--panel); border-top: 1px solid var(--line);
 }
+/*
+  The status line lives on ONE line and is cut with an ellipsis.
+
+  Without that it ruled the layout of the whole panel. In a side dock there is
+  no width left for it - measured on a 543 px panel: 41 px of width - and the
+  text wrapped by words. A short "ready" gave a height of 64 px, a long
+  "working..." with a report of points gave 128. The height of the bottom strip
+  moved by 64 px, the scene squeezed and unsqueezed by the same amount, the
+  size observer caught the jump and asked for a relayout with a recount, the
+  recount changed the text back - and the circle closed.
+
+  Measured on a docked panel: 36 rebuilds in 20 seconds of complete stillness,
+  437 ms of computation each. That is the flicker from issue #2: the panel
+  redrew itself twice a second while the person did nothing. In a floating
+  window there was enough width, the wrap never happened - which is why the
+  author noticed a difference between the dock and the floating window.
+*/
 .dock .statusbar {
+  /*
+    The share in the layout is given as a number rather than by the content:
+    with basis auto the room for the strip would be computed from the length of
+    the text, and a wrap onto a second row would again depend on what is written
+    in it. A hundred and twenty pixels - and nothing depends on the text any
+    more.
+  */
   flex: 1 1 120px; min-width: 120px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+.turnpick { display: flex; gap: 4px; }
+.turnpick button {
+  width: 26px; height: 24px; border-radius: 6px; border: 1px solid var(--edge);
+  background: transparent; color: var(--ink-dim); font-size: 11px; cursor: pointer;
+}
+.turnpick button:hover { color: var(--ink); background: var(--line-soft); }
+.turnpick button[aria-pressed="true"] {
+  color: var(--accent); background: var(--accent-soft); border-color: var(--accent);
+}
+
 .marks { display: flex; gap: 3px; }
+/*
+  The cell is a split button: the main part restores, the arrow opens overwrite
+  and clear. Both actions used to live in modifiers, and the only way to learn
+  of them was the hint - secret knowledge instead of a button (the remark from
+  bms-2015). The modifiers stayed: whoever knows them is quicker.
+
+  Only an occupied cell has an arrow: there is nothing to overwrite or clear in
+  an empty one.
+*/
+.mark { display: inline-flex; align-items: stretch; }
 .marks button {
-  width: 24px; height: 24px; border-radius: 6px;
+  height: 24px; border-radius: 6px;
   color: var(--ink-faint); font-size: 11px; font-variant-numeric: tabular-nums;
   transition: all .12s ease;
 }
+.marks .mark-face { width: 24px; }
+.mark.split .mark-face { width: 22px; border-radius: 6px 0 0 6px; }
+.mark.split .mark-caret {
+  width: 13px; border-radius: 0 6px 6px 0; margin-left: 1px;
+  display: grid; place-items: center; padding: 0;
+}
+.mark.split .mark-caret svg { width: 9px; height: 9px; }
 .marks button:hover { background: var(--line-soft); color: var(--ink); }
-
-.marks button.full {
+/*
+  An occupied cell looks pressed into the panel. The light falls from above, so
+  the shadow runs along the upper inner edge and a barely visible highlight
+  along the lower one: that is how the eye reads a hollow with not a word of
+  caption. The indicator dot is no longer needed.
+*/
+.marks button.full, .mark.split .mark-caret {
   color: var(--accent); background: var(--accent-soft); font-weight: 600;
   box-shadow: inset 0 0 0 1px var(--line),
               inset 0 2px 3px -1px rgba(0, 0, 0, .22),
               inset 0 -1px 0 rgba(255, 255, 255, .07);
 }
-.marks button.full:hover { background: var(--accent-soft); color: var(--accent); }
-
+.marks button.full:hover, .mark.split .mark-caret:hover { background: var(--accent-soft); color: var(--accent); }
+.mark.split .mark-caret:hover { box-shadow: inset 0 0 0 1px var(--accent); }
+/* A press answers with a short push - a restore leaves no other trace. */
 @keyframes markPulse {
   0% { transform: scale(.86); }
   55% { transform: scale(1.08); }
@@ -498,12 +619,38 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 .tk-num { color: var(--accent); }
 .tk-sep { color: var(--ink-faint); }
 .tk-bad { color: var(--c2); text-decoration: underline wavy currentColor; text-underline-offset: 3px; }
+/*
+  The reference of signs. A two-column layout will not do: names can be long
+  (MilliSecondOfTheMonth), and the second column would squeeze down to nothing
+  readable. So a row: the name with an example on the left in a monospaced
+  face, the meaning and the description after it.
+*/
+.ref-find {
+  width: 100%; height: 30px; padding: 0 10px; margin-bottom: 10px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--paper); color: var(--ink); font-size: 12.5px;
+}
+.ref-list { max-height: 52vh; overflow: auto; }
+.ref-sec { margin: 0 0 4px; padding-top: 10px; font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dim); }
+.ref-sec:first-child { padding-top: 0; }
+.ref-item { display: flex; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); }
+.ref-item:first-of-type { border-top: none; }
+.ref-name { flex: 0 0 34%; font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.ref-name em { font-style: normal; color: var(--dim); }
+.ref-says { flex: 1; font-size: 12.5px; color: var(--ink); }
+.ref-says b { font-weight: 600; }
+.ref-says i { font-style: normal; color: var(--dim); }
+
+.ref-item.trap .ref-says b { color: var(--warn, #b45309); }
+
 .sheet-note {
   margin: 11px 2px 0; min-height: 18px;
   color: var(--ink-dim); font-size: 12px; line-height: 1.5;
 }
 .sheet-note b { color: var(--ink); font-weight: 600; }
 .sheet-note.bad { color: var(--c2); }
+
 .drawer {
   position: absolute; top: 0; right: 0; bottom: 0; width: 296px;
   background: var(--panel); border-left: 1px solid var(--line);
@@ -538,14 +685,38 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 
 .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
+/*
+  A bound group of fields: Width, Height and the ratio switch are one thing,
+  because the switch says how the two values above it are tied together. A
+  region of its own shows that without a word of explanation.
+
+  The tone comes from the surface of the fields themselves and the border from
+  the soft line of the separators: the block reads as a continuation of the
+  fields rather than as another panel inside a panel. The switch is set off by
+  a hairline - it is not a third value but a rule for the first two.
+*/
 .band {
   display: grid; gap: 9px; padding: 10px;
-  
+  /*
+    An outward margin of exactly its own border plus padding: then the captions
+    and the right edge of the fields inside stand on the same lines as those of
+    the neighbouring rows. Otherwise the group falls out of the vertical that
+    every field of the panel holds, and that shows at once.
+  */
   margin: 1px -11px;
   background: var(--surface); border: 1px solid var(--line-soft);
   border-radius: 9px;
 }
 .band .tie { border-top: 1px solid var(--line-soft); padding-top: 9px; }
+/*
+  The caption of the switch is the same colour as the other captions of the
+  panel.
+
+  It used to stand in --ink-faint - lighter than the rest. Together with a grey
+  switch that gave exactly the look by which a DISABLED control is shown, and
+  the switch read as turned off. That is how it was asked about: "it does not
+  work". It worked; it looked dead.
+*/
 .band .tie label { font-size: 11px; color: var(--ink-faint); }
 .row label { color: var(--ink-dim); font-size: 12px; }
 .num {
@@ -555,6 +726,12 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   transition: border-color .13s ease, box-shadow .13s ease;
 }
 .num:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/*
+  A field that is not being set right now but computed. While the ratio holds,
+  the height follows from the width: one side is set, the other shows the
+  result. The locked look says so plainly; otherwise both fields look equally
+  free while the second merely reflects what was computed.
+*/
 .num[readonly] {
   background: transparent; border-color: transparent; color: var(--ink-faint);
   cursor: default;
@@ -578,10 +755,15 @@ select.num { text-align: left; width: 108px; }
 
 .hint { color: var(--ink-faint); font-size: 11px; padding: 0 14px 12px; }
 
+/*
+  The report covers the whole canvas, so it has to lie above the floating panels
+  (the list of formulas is 3) and below the sliding settings (5): otherwise the
+  list of formulas hangs over the text of the report.
+*/
 .report { position: absolute; inset: 0; background: var(--surface); overflow: auto; padding: 26px 30px; display: none; z-index: 4; }
 .report.on { display: block; }
 .report .empty { color: var(--ink-faint); font-size: 13px; }
-
+/* The markup with the facts comes from the engine: a factbox block with tables. */
 .report .factbox h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-dim); margin: 0 0 14px; }
 .report .factbox h3 { font-size: 15px; margin: 20px 0 8px; letter-spacing: -.1px; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; }
 .report table.facts { border-collapse: collapse; width: 100%; max-width: 560px; margin-bottom: 8px; }
@@ -625,9 +807,9 @@ select.num { text-align: left; width: 108px; }
   }
 
   /*
-    The report unfolds WHOLE: no height of its own, no clipping. It is shown
-    even when closed on screen - printing asks for it itself and does not
-    depend on whether the report window was opened.
+    The report unfolds IN FULL: no height of its own, no clipping. It is
+    rendered even while closed on the screen - printing asks for it itself and
+    does not depend on whether the person opened the report window.
   */
   .report {
     position: static; inset: auto; display: block !important;
@@ -663,8 +845,14 @@ select.num { text-align: left; width: 108px; }
       <div class="hist" id="hist"></div>
     </div>
 
+    <!--
+      The word is gone: the icon speaks for itself, and the name of the button
+      stayed in title and aria-label. Without those the button would be
+      nameless - no hint, and a screen reader silent - while every other icon
+      button on this page has a name.
+    -->
     <button class="primary mark-only" id="draw" title="Build" aria-label="Build">
-      
+      <!-- A symmetric sine: one period centred in the field, amplitude 4.5. -->
       <svg viewBox="0 0 24 24"><path d="M3 12c3.24-6 5.76-6 9 0s5.76 6 9 0"/></svg>
     </button>
 
@@ -672,24 +860,34 @@ select.num { text-align: left; width: 108px; }
 
     <button class="icon-btn" id="copyBtn" title="Copy state"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="11" height="13" rx="2"/><path d="M8 20h9a2 2 0 0 0 2-2V8"/></svg></button>
     <button class="icon-btn" id="pasteBtn" title="Paste state"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V5"/></svg></button>
-    <!-- The caption drops the word "report": both the graph and the report are
-         printed, and the promise should match the deed. -->
+    <!-- A caption without the word "report": both the plot AND the report are
+         printed, and the promise has to match the deed. -->
     <button class="icon-btn" id="printBtn" title="Print"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="7" rx="2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg></button>
     <button class="icon-btn npp-only" id="toTabBtn" title="Report to a new tab" hidden><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 9v6M9 12h6"/></svg></button>
     <button class="icon-btn npp-only" id="toCaretBtn" title="Report at the caret" hidden><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h7M4 17h10"/><path d="M17 9v9M14 12l3-3 3 3"/></svg></button>
+    <!--
+      LIVE PICK-UP. Asked for by bms-2015 in issue #4: "a button for the live
+      search - pressed: live, released: Alt+Shift+G only".
+
+      The button is in the plugin only: on the site there is nothing to pick up,
+      there is no editor there. Pressed by default - that is how the panel has
+      behaved until now, and a habit must not be changed without asking.
+    -->
+    <button class="icon-btn npp-only" id="liveBtn" hidden aria-pressed="true"
+            title="Live pick-up from the editor" aria-label="Live pick-up from the editor"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
     <button class="icon-btn" id="reportBtn" title="Report"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
     <button class="icon-btn" id="themeBtn" title="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
     <button class="icon-btn" id="gearBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
 
     <!--
       Undo and clear stand AT THE END of the row and behind a separator, apart
-      from the harmless ones. "Clear" used to sit between "Print" and "Report" -
-      three neighbouring buttons, two of which show something and the third
-      wipes the formula list without a single question. The report in issue #3
-      opened with it.
+      from the harmless ones. "Clear" used to stand between "Print" and
+      "Report" - three neighbouring buttons, two of which show something while
+      the third wipes the list of formulas without a single question. The
+      remark in issue #3 began with exactly that.
 
-      Undo stands BEFORE clear: a miss lands on the safe action rather than on
-      the destructive one.
+      Undo stands BEFORE clear: missing the target, a person lands on the safe
+      action rather than the destructive one.
     -->
     <div class="sep"></div>
     <button class="icon-btn" id="undoBtn" title="Nothing to undo" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
@@ -700,7 +898,7 @@ select.num { text-align: left; width: 108px; }
   <div class="stage" id="stage">
     <canvas id="plot"></canvas>
 
-    
+    <!-- The panel of functions: colour, text, the live trace value, controls -->
     <div class="float panel" id="panel">
       <div class="panel-head" id="panelHead">
         <span class="panel-title">
@@ -709,12 +907,12 @@ select.num { text-align: left; width: 108px; }
           <!--
             Series are counted SEPARATELY and only when there are any.
 
-            Adding them to the functions is not allowed: a series of points is
-            not a function, and "functions 2" with one curve and one series is
-            untrue. Staying silent about them is not allowed either: the
-            screenshot of the report on 17.08.2026 showed "functions 0" above a
-            visible series row, and the person read it as a breakage. One of the
-            two numbers has to explain the other.
+            They cannot be added to the functions: a series of points is not a
+            function, and "functions 2" with one curve and one series is
+            untrue. Keeping quiet about them is no good either: the screenshot
+            of the complaint of 17.08.2026 showed "functions 0" above a visible
+            series row, and the person read that as a breakage. One of the two
+            numbers has to explain the other.
           -->
           <span id="serCount" hidden>series<em id="serNum">0</em></span>
         </span>
@@ -767,6 +965,20 @@ select.num { text-align: left; width: 108px; }
       -->
       <div class="sep web-only" style="margin: 4px 3px" hidden></div>
       <button class="icon-btn web-only" id="dataBtn" hidden title="Point table" aria-label="Point table"><svg viewBox="0 0 24 24"><path d="M4 3v15a3 3 0 0 0 3 3h14"/><circle cx="9" cy="16" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.5" cy="11" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+      <!--
+        The reference of signs and functions. The button stands in both builds,
+        unlike its neighbour: on the site there is nowhere to paste a table
+        from, but asking "how is a power written" is needed everywhere.
+
+        The occasion was issue #5 from bms-2015: "I cannot work out the syntax
+        of formulas, the square and the root in particular; is there a list
+        somewhere". The list was on a page of the site, but a person inside the
+        editor does not know about it and is not obliged to.
+
+        The icon is a book: it cannot be taken for the grid or for the points
+        of a series.
+      -->
+      <button class="icon-btn" id="helpBtn" title="Signs and functions" aria-label="Signs and functions"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z"/><path d="M8.5 7.5h6"/><path d="M8.5 11h4"/></svg></button>
     </div>
 
     
@@ -800,13 +1012,13 @@ select.num { text-align: left; width: 108px; }
 
   
   <!--
-    THE POINT TABLE DIALOG. Web version only, see the button above.
+    THE WINDOW FOR A TABLE OF POINTS. The web build only, see the button above.
 
-    The shape sits between the settings drawer and a tooltip: a drawer slides in
-    from the side and stays, while a person comes here for one action - paste,
-    look, build. So the dialog stands in the middle of the canvas with the
-    background dimmed: it takes the whole of the attention and gives it back
-    whole.
+    The shape is chosen halfway between the settings drawer and a hint: the
+    drawer slides in from the side and lives a long time, while a person comes
+    here for one action - pasted, looked, drew. So the window sits in the
+    middle of the canvas with dimming behind it: it takes the whole of the
+    attention and gives the whole of it back.
   -->
   <!--
     The dialog and the dimming are NOT marked web-only, and that matters.
@@ -819,6 +1031,35 @@ select.num { text-align: left; width: 108px; }
     Hiding the dialog from the plugin separately is not needed: the only way in
     is the button, and the plugin has no button.
   -->
+  <!--
+    The reference window. Built like the table window: the same layout, the
+    same dimming, the same way out on Escape - a person already knows how this
+    closes.
+
+    The content is NOT built into the page. It comes from the file syntax.xml
+    that lies next to the library of the plugin: in the plugin the host reads
+    it and sends it as an answer, on the site the page takes it itself. The
+    reason is simple - the reference changes with the parser, and the page is
+    rebuilt less often.
+  -->
+  <div class="sheet-back" id="helpBack" hidden></div>
+  <section class="sheet" id="helpSheet" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <header>
+      <b id="helpTitle">Signs and functions</b>
+      <button class="icon-btn" id="helpClose" title="Close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </header>
+    <div class="sheet-body">
+      <input class="ref-find" id="helpFind" type="search" spellcheck="false" autocomplete="off"
+             placeholder="Search: a name, a meaning or an example" aria-label="Search the reference">
+      <div class="ref-list" id="helpList" tabindex="0"></div>
+    </div>
+    <footer>
+      <span class="sheet-note" id="helpNote" role="status" aria-live="polite"></span>
+      <span class="grow"></span>
+      <button class="btn ghost" id="helpDone">Close</button>
+    </footer>
+  </section>
+
   <div class="sheet-back" id="dataBack" hidden></div>
   <section class="sheet" id="dataSheet" hidden role="dialog" aria-modal="true" aria-labelledby="dataTitle">
     <header>
@@ -838,7 +1079,7 @@ select.num { text-align: left; width: 108px; }
         <pre class="code-mirror" id="dataMirror" aria-hidden="true"></pre>
         <textarea id="dataInput" spellcheck="false" autocomplete="off" wrap="off"
                   aria-describedby="dataNote"
-                  placeholder="Paste a table: two columns of numbers.&#10;The separator is guessed for you.&#10;&#10;time;distance&#10;0.1;0.049&#10;0.2;0.196&#10;0.3;0.441"></textarea>
+                  placeholder="Paste a table: two columns of numbers.&#10;The separator is guessed.&#10;A blank line splits it into separate series.&#10;&#10;time;distance&#10;0.1;0.049&#10;0.2;0.196&#10;0.3;0.441"></textarea>
       </div>
       <p class="sheet-note" id="dataNote" role="status" aria-live="polite"></p>
     </div>
@@ -849,6 +1090,7 @@ select.num { text-align: left; width: 108px; }
       <button class="btn solid" id="dataOk" disabled>Build</button>
     </footer>
   </section>
+
   <aside class="drawer" id="drawer">
     <header>
       <b>Settings</b>
@@ -868,7 +1110,32 @@ select.num { text-align: left; width: 108px; }
           </div>
           <div class="row"><label>Grid step X</label><input class="num" data-opt="hSpacing" value="1"></div>
           <div class="row"><label>Grid step Y</label><input class="num" data-opt="vSpacing" value="1"></div>
-          <div class="row"><label>Polar angle</label><input class="num" data-opt="polarAngle" value="360"></div>
+          <!--
+            The polar angle is HOW MUCH to walk in total, not where to stop.
+            360 is one turn, and by default a spiral is drawn as a single turn:
+            the remark from bms-2015 in issue #5, "a spiral of one turn". The
+            engine does listen to a larger angle - PolarProbe on 20.08.2026
+            gave exactly 1, 2 and 3 turns for 360, 720 and 1080 - but the
+            setting sat there as a number with no caption, and there was
+            nowhere to learn what it meant.
+
+            The turn buttons stand beside the field: they explain what the
+            number means and save doing the arithmetic in your head. The field
+            stays - turns can be fractional.
+          -->
+          <div class="row polar-only" hidden>
+            <label>Polar angle</label>
+            <input class="num" data-opt="polarAngle" value="360">
+          </div>
+          <div class="row polar-only turns" hidden>
+            <label>Turns</label>
+            <div class="turnpick">
+              <button data-turns="1">1</button>
+              <button data-turns="2">2</button>
+              <button data-turns="3">3</button>
+              <button data-turns="5">5</button>
+            </div>
+          </div>
         </div>
       </details>
 
@@ -904,7 +1171,14 @@ select.num { text-align: left; width: 108px; }
       <details class="group">
         <summary>Marks</summary>
         <div class="rows">
-          
+          <!--
+            The smallest distance between shown marks, in screen pixels. The
+            measure is in pixels rather than in units of the plot: then the gap
+            between marks stays the same at any zoom, and a forest of them
+            grows neither on the way in nor on the way out. Zero turns the
+            thinning off. One rule for all marks - for intersections and for
+            extremes alike.
+          -->
           <div class="row"><label>Minimum spacing, px</label><input class="num" data-opt="markSpacing" value="14"></div>
         </div>
       </details>
@@ -978,13 +1252,14 @@ function keepTheme(value) {
   }
   let saved = null;
   try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
-  // The light one has to be applied explicitly as well: the host may have set
-  // dark from the system setting, and without this branch a choice of light
+  // The light one has to be applied explicitly too: the host may have set the dark
   // would not survive a reload.
   if (saved === "dark" || saved === "light")
     document.documentElement.dataset.theme = saved;
 })();
 
+/* The link to the plugin. Without it the page works on its own: it shows a
+   demo so that the look can be worked on in an ordinary browser. */
 const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
 /*
   No host at all - the page was opened as a file. That is the web too, and there
@@ -998,6 +1273,7 @@ if (!host)
     document.querySelectorAll(".web-only").forEach(b => b.hidden = false));
 const palette = ["--c1", "--c2", "--c3", "--c4", "--c5"];
 
+// Formulas: what was typed, whether it is visible, whether it is traced. The colour comes from the engine.
 const curves = [];
 
 // The built-in example: the sheet a system starts with until it has its own.
@@ -1030,13 +1306,15 @@ function currentCS() {
 // The current sheet goes to the shelf, the new one comes off it (or the example).
 function switchSheet(from, to) {
   shelf[from] = {
-    formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor })),
+    formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor,
+      ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
     cleared: emptiedByUser && curves.length === 0
   };
   const next = shelf[to];
   curves.length = 0;
   if (next && Array.isArray(next.formulas) && (next.formulas.length || next.cleared)) {
-    next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null, editor: f.editor }));
+    next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null,
+      editor: f.editor, ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
     emptiedByUser = next.cleared && curves.length === 0;
   } else {
     freshSheet().forEach(c => curves.push(c));
@@ -1066,11 +1344,25 @@ function switchSheet(from, to) {
 */
 let emptiedByUser = false;
 
-
+// What was computed: pieces of curves, intersections, extremes. All in the coordinates of the plot.
 const data = { seg: [], overlaps: [], extremes: { max: [], min: [] }, trace: null };
-
+// The set of curves drawn by the previous build: it shows whether the marks are stale.
 let lastShown = "";
 const view = { cx: 0, cy: 0, w: 10, h: 3.2 };
+/*
+  The default values have to match the markup of the settings drawer:
+  syncControls restores the fields from here, and it will not bring back a key
+  that is missing here. Half the keys used to be missing - the fields lived on
+  their own and reached nowhere.
+*/
+/*
+  LIVE PICK-UP is on by default: that is how the panel worked before the button
+  appeared. A released button puts out TWO roads - the suggestion from the line
+  under the cursor and the preview of a selection - leaving only the deliberate
+  Alt+Shift+G. Whether it is pressed is kept in the state, so it survives a
+  reload and bookmarks.
+*/
+let liveCatch = true;
 
 const opt = {
   grid: true, axis: true, trace: true, cross: true, peak: true, sign: true,
@@ -1078,7 +1370,6 @@ const opt = {
   quality: 18, accuracy: 1, penWidth: 1, decimals: 6,
   hSpacing: 1, vSpacing: 1, polarAngle: 360,
   calcTime: 5000, overlapTime: 1000, overlapDepth: 16,
-
   /*
     The plugin's own zoom step. The component defaults to 0.5, and that number
     plays no part here: the host seeds these values into the component when it is
@@ -1088,17 +1379,68 @@ const opt = {
   */
   zoomIn: 0.1, zoomOut: 0.1,
   penColor: "--c1",
-  
+  /*
+    The corner of the caption is as in the component: DefaultSignLayout =
+    ltBottomRight. The zoom buttons stand at the bottom left, and the legend
+    crawled over them.
+  */
   signLayout: 1, signMargin: 16, signBlend: 235,
-  
+  /*
+    Keeping the ratio means keeping a cell square. Then the second side of the
+    view is not set but computed from the first and from the proportions of the
+    canvas: a circle stays a circle. Turning it off gives back what the
+    component can do - independent MaxX and MaxY. Needed when the spans along
+    the axes are nothing alike and a square cell flattens the plot into a line.
+  */
   keepRatio: true,
-  
+  /*
+    The smallest distance between shown marks, in screen pixels. Like
+    DefaultMarkSpacing in the component. Of the marks that fall inside that gap
+    one is shown: then the picture does not turn into a forest at any zoom, and
+    the gap on the screen stays the same. Zero turns it off.
+  */
   markSpacing: 14
 };
 
 const el = id => document.getElementById(id);
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const tone = i => curves[i] && curves[i].color ? curves[i].color : css(palette[i % palette.length]);
+
+/*
+  THE LOOK OF ONE CURVE: colour, width, dash.
+
+  Three fields on a curve - ink, wide, dash - and an empty one in each means
+  "same as the rest": the colour from the engine or the pen from the settings,
+  the width of that pen, a solid line. This is not the same as the colour the
+  engine puts into c.color: that one arrives with every computation and would
+  overwrite our choice. So the field is OUR OWN.
+
+  Issue #4 from bms-2015: "I want to set the colour and the style of each curve
+  separately".
+
+  The dash is given in fractions of the width rather than in pixels: with a
+  thick pen a dash computed in pixels merges into a solid line.
+*/
+const Dashes = {
+  solid: null,
+  dash: [4, 3],
+  dot: [1, 2.4],
+  dashdot: [5, 2.4, 1, 2.4]
+};
+
+function curveInk(c, i) {
+  if (c && c.ink) return c.ink;
+  return opt.multicolor ? (c && c.color ? c.color : tone(i)) : css(opt.penColor);
+}
+
+function curveWide(c) {
+  return (c && c.wide ? c.wide : opt.penWidth) + .8;
+}
+
+function curveDash(c, width) {
+  const kind = c && c.dash ? Dashes[c.dash] : null;
+  return kind ? kind.map(v => v * Math.max(1, width)) : [];
+}
 
 function send(message) {
   if (host) host.postMessage(JSON.stringify(message));
@@ -1112,11 +1454,24 @@ if (host) host.addEventListener("message", e => {
 });
 
 function answer(m) {
+  if (m.type === "reference") {
+    // The host brought the reference: a page opened from a file cannot read its neighbour.
+    refBusy = false;
+    refShow(m.text || "");
+    return;
+  }
   if (m.type === "busy") { el("status").textContent = "computing..."; return; }
   if (m.type === "curves") {
     data.seg = m.list || [];
     data.seg.forEach(c => { if (curves[c.i]) curves[c.i].color = c.color; });
-    
+    /*
+      Marks belong to the set of curves they were computed on. While the set is
+      the same - through a pan, a zoom, a change of settings - they stay where
+      they are and do not blink while the engine recomputes. The moment the set
+      changes, the old ones have nothing to do with the new plot: after a
+      formula was deleted its extremes and its trace stayed on the screen
+      although the curve itself was gone.
+    */
     const shown = data.seg.map(c => c.i).join(",");
     if (shown !== lastShown) {
       lastShown = shown;
@@ -1129,13 +1484,38 @@ function answer(m) {
     document.querySelector(".statusbar").classList.remove("busy");
     el("status").textContent = m.error
       ? m.error
-      : (m.points || 0).toLocaleString("en") + " points, " + (m.ms || 0) + " ms";
+      : (m.points || 0).toLocaleString("ru") + " points, " + (m.ms || 0) + " ms";
     drawPanel(); paint();
     return;
   }
   if (m.type === "overlaps") {
-    data.overlaps = m.list || [];
-    
+        /*
+      CROSSING MARKS DO NOT OUTLIVE THEIR CURVES.
+
+      The same guard as the one on extrema below, and for the same reason.
+      Curves, marks and the trace arrive at different times. On a clear the page
+      puts out what it has computed and orders a rebuild; the host answers with
+      an empty set of curves - the guard in the curves branch takes everything
+      away - and then the answer about crossings arrives, computed BEFORE the
+      clear, and lands on top of the emptiness.
+
+      For extrema this was fixed after a report on 17.08.2026, and the same
+      thought was never carried here. On 21.08.2026 a user sent a screenshot:
+      FUNCTIONS 0, zero points, and seven marks A...G belonging to curves that
+      were gone.
+
+      What is checked is what is drawn (data.seg), not the list of formulas: the
+      list can grow while the engine computes, and marks from the previous set
+      would belong to someone else.
+    */
+    data.overlaps = data.seg.length ? (m.list || []) : [];
+    /*
+      How many were found in all, and the stretches where curves cannot be told
+      apart. The report has to name the real number rather than the shown one:
+      otherwise it keeps quiet about what did not fit. Curves that coincide
+      have no marks at all, and without a line about the stretch a person
+      cannot tell "the program found nothing" from "there is nothing to find".
+    */
     data.crossTotal = m.total === undefined ? data.overlaps.length : m.total;
     data.same = m.same || [];
     paint();
@@ -1144,26 +1524,27 @@ function answer(m) {
   /*
     A formula picked up from the editor.
 
-    It takes ONE slot in the list - the slot that follows the editor - instead
-    of being appended anew every time: appending would fill the list within a
-    minute of pointing around a file. The formulas you typed yourself stay
-    where you put them; the suggestion does not touch them.
+    It takes ONE cell of the list, and that cell follows the editor rather than
+    a new one being added each time: otherwise the list would fill up in a
+    minute of working with the mouse. The person's own formulas stay where they
+    are - the suggestion does not touch them.
   */
   /*
-    The buttons that report into the editor are shown only when the host itself
-    says an editor is there. The presence of a host was never the right signal:
-    the demo on the site SUBSTITUTES window.chrome.webview so that the page
-    works without a plugin, and the standalone Lazarus window is a host with
-    nowhere to write. In both the buttons were visible and did nothing.
+    The buttons that send a report to the editor are shown only when the host
+    ITSELF said there is an editor. The presence of a host was never the sign:
+    the demo on the site substitutes window.chrome.webview so that the page
+    works without the plugin, and the standalone Lazarus window is a host with
+    no editor. In both the buttons were visible and did nothing.
   */
   /*
-    Evaluation budgets follow the same rule. Sampling accuracy, computation
-    time, and the time and depth of the intersection search are wired up in the
-    native engine only. The WebAssembly build evaluates formulas; the analysis
-    of the graph in the browser is written again in JavaScript and knows nothing
-    about those budgets. A setting on display that nobody reads is worse than a
-    setting that is absent: a reader turns it and concludes something about
-    behaviour that is not there.
+    The computation budgets follow the same rule. The sampling accuracy, the
+    time of a computation, the time and the depth of the search for
+    intersections are wired up only in the native engine. The WebAssembly build
+    computes the values of formulas, while the tracing of the plot in the
+    browser is written anew in JavaScript and knows nothing of those budgets. A
+    setting that is shown and that nobody reads is worse than one that is
+    absent: a person turns it and draws a conclusion about behaviour that does
+    not exist.
   */
   /*
     THE WEB VERSION IS RECOGNISED BY THE ABSENCE OF AN EDITOR, and only by an
@@ -1190,6 +1571,9 @@ function answer(m) {
     return;
   }
   if (m.type === "suggest") {
+    // The pick-up is released - the live roads keep quiet. Alt+Shift+G (adopt) always works:
+
+    if (!liveCatch || rowEditing || editing()) return;
     const text = (m.text || "").trim();
     if (!text) return;
     el("formula").value = text;
@@ -1197,8 +1581,10 @@ function answer(m) {
     if (slot >= 0) {
       if (curves[slot].text === text) return;
       curves[slot].text = text;
+      curves[slot].from = "suggest";
     } else {
-      curves.push({ text, on: true, trace: true, color: null, editor: true });
+      curves.push({ text, on: true, trace: true, color: null, editor: true,
+                    from: "suggest" });
     }
     emptiedByUser = false;
     drawPanel();
@@ -1236,6 +1622,7 @@ function answer(m) {
     somebody else's.
   */
   if (m.type === "preview") {
+    if (!liveCatch || rowEditing || editing()) return;
     const raw = String(m.text || "");
     /*
       The same selection a second time costs NOTHING.
@@ -1249,8 +1636,27 @@ function answer(m) {
       moving the mouse.
     */
     if (raw === previewOf) return;
-    dropPreview();
-    const table = parseTable(raw);
+    /*
+      AN EMPTY PREVIEW REMOVES ONLY WHAT IS ITS OWN.
+
+      Issue #4 from bms-2015: "you click a formula, it is drawn, and a moment
+      later it disappears; you have to click other data and then it again".
+
+      Traced through the code on 20.08.2026. A click on a line gives TWO events
+      in a row: first the pick-up of the line under the cursor (which is what
+      draws), then the preview of the selection - and there is no selection. An
+      empty preview called dropPreview wholesale and removed what had just been
+      drawn. A second click in the same place did not help: the editor sends no
+      notification when neither the caret nor the selection moved - hence the
+      workaround of "click other data".
+
+      Clearing a selection has to remove what the selection showed; that is
+      lawful. But the pick-up of a line did not come from a selection, and it
+      must not be touched.
+    */
+    dropPreview(raw.trim() ? null : "preview");
+    const tables = parseTables(raw);
+    const table = tables[0] || null;
     if (table) {
       /*
         What has already been taken for good is not shown again. Otherwise it
@@ -1263,15 +1669,16 @@ function answer(m) {
                  + table.points[table.points.length - 1].y;
       if (!series.some(s => !s.editor && s.points.length + ':' + s.points[0].x + ':'
                             + s.points[s.points.length - 1].y === sign))
-        addSeries(table, true);
+        tables.forEach(one => addSeries(one, true));
     } else {
       const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
       list.forEach(text => {
         if (curves.some(c => c.text === text)) return;
-        curves.push({ text: text, on: true, trace: true, color: null, editor: true });
+        curves.push({ text: text, on: true, trace: true, color: null,
+                      editor: true, from: "preview" });
       });
-      // One formula in the input field is what the pickup used to do, and there
-      // is no reason to lose that habit on the way to the preview: a person is
+      // One formula in the input field is what the pick-up did, and there is no reason
+      // to lose that habit on the way to a preview: a person is used to seeing what
       // used to seeing the selection in the field and editing it there.
       if (list.length === 1) el("formula").value = list[0];
     }
@@ -1299,28 +1706,29 @@ function answer(m) {
   */
   if (m.type === "adopt") {
     /*
-      A selection can also be a table. Same path and same rule as for the
-      clipboard: the table first, the formula list second. There is deliberately
-      no separate button for data - a person selects columns exactly as he would
-      select formulas, and a second way in would have to be looked for and
-      remembered.
+      A selection can be a table too. By the same path and the same rule as the
+      clipboard: a table first, a list of formulas after. There is deliberately
+      no separate button for data - a person selects columns the way they would
+      select formulas, and a second way of entering things would have to be
+      looked for and remembered.
 
-      The table is looked for in the RAW selection (m.text), not in m.list. The
-      host has already sifted that list through the formula parser, and table
-      rows like "1;2" do not get in - they do not parse as formulas. So looking
-      for a table in the list is useless: it is empty in exactly the case the
-      search exists for. The page decides, since it holds both parsers.
+      The table is looked for in the RAW selection (m.text), not in the m.list
+      list. The host has already sifted that list through the reading of
+      formulas, and table rows like "1;2" do not reach it - they do not read as
+      formulas. So looking for a table in the list is pointless: it will always
+      be empty in exactly the case the search is there for. The page decides;
+      it has both readings.
     */
     /*
-      The preview is taken off BEFORE the adoption, and this is not tidying up.
-      The same selection is being shown temporarily right now; without taking
-      the preview off we would lay its temporary copy beside the permanent one -
-      two identical rows in the list, one of which vanishes by itself and the
+      The preview is removed BEFORE the acceptance, and that is not tidying up.
+      The same selection is being shown temporarily right now; without removing
+      the preview we would put its temporary copy beside its permanent one -
+      two identical rows in the list, one of which disappears by itself and the
       other does not.
     */
     dropPreview();
-    const asTable = parseTable(m.text);
-    if (asTable) { addSeries(asTable); return; }
+    const tables = parseTables(m.text);
+    if (tables.length) { tables.forEach(one => addSeries(one)); return; }
     const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
     let added = 0;
     list.forEach(text => {
@@ -1372,7 +1780,13 @@ function answer(m) {
     paint();
     return;
   }
-  
+  /*
+    Text from the clipboard. The page reads it, not the host: a link is a whole
+    state, while several lines in a row are simply a list of formulas, as they
+    were in the classic window. Keeping both readings in one place matters more
+    than the convenience of the host: two implementations of one answer have
+    already drifted apart today over intersections.
+  */
   if (m.type === "clipboard") {
     const shared = shareState(m.text);
     if (shared) { applySnapshot(Object.assign({ type: "snapshot" }, shared)); return; }
@@ -1401,33 +1815,48 @@ function answer(m) {
     });
     return;
   }
-
+  // A snapshot after loading a bookmark or a paste: the set of formulas changed.
   if (m.type === "snapshot") { applySnapshot(m); return; }
 
   if (m.type === "bookmarks") { (m.slots || []).forEach((v, i) => marks[i] = v ? 1 : 0); drawMarks(); return; }
 
   if (m.type === "report") {
     el("reportBody").innerHTML = m.html || "<p class='empty'>Build a graph - facts about the functions will appear here.</p>";
-    // Printing was waiting for exactly this: it asks for the report and prints
-    // when the report arrives, not on a timer. Otherwise the paper would carry
+    // Printing was waiting for exactly this: it asks for the report and prints when it
     // the report of the previous build.
     printNow();
     return;
   }
 }
 
+// Apply the state that arrived: the coordinate system, the formulas, the settings.
 function applySnapshot(m) {
-  
+  /*
+    A snapshot with no formulas is not applied. Applying it means wiping a plot
+    that is already there, with nothing to put back.
+
+    This is not a precaution kept just in case. It is exactly what happened on
+    30.07 in the plugin: a session written in a minute when there were no
+    formulas wiped the work at the next opening, and the emptiness then
+    reproduced itself at every start. The guard in the plugin WAS written, and
+    it was one comparison short: it checked that the list of formulas is an
+    array, and an empty array passed.
+
+    Here the same rule from the side of the page: a snapshot reaches it from the
+    plugin, from a share link and from a bookmark alike. The check lives in a
+    browser set that actually runs - unlike the plugin path, which nothing
+    checks.
+  */
   if (!Array.isArray(m.formulas)) return;
   /*
-    An empty list is applied only when it carries the mark, which the page sets
-    when the person deleted the formulas. Without the mark emptiness is an
-    accident, and applying it means erasing somebody's work.
+    An empty list is applied only with a mark on it: the page sets that mark
+    when the person deleted the formulas themselves. Without the mark emptiness
+    is an accident, and applying it means wiping somebody's work.
 
-    The refusal stands HERE and nowhere else: past this line the snapshot is
-    applied as usual. The first attempt returned from the whole procedure, and
-    somebody who emptied the sheet in polar coordinates came back to a blank one
-    in cartesian with default settings - everything was lost except the
+    The refusal stands HERE and nowhere else: past this point the snapshot is
+    applied as usual. The first attempt left the whole procedure, and a person
+    who had deleted the formulas in polar coordinates got a blank sheet in
+    cartesian ones with default settings - everything was lost except the
     emptiness itself.
   */
   /*
@@ -1438,6 +1867,7 @@ function applySnapshot(m) {
     and his points were gone. Emptiness without the mark is still thrown away:
     it means an accident, not a choice.
   */
+  if ("live" in m) setLive(!!m.live, true);
   if (m.formulas.length === 0 && !m.cleared
       && !(Array.isArray(m.series) && m.series.length)) return;
   const o = m.options || {};
@@ -1446,7 +1876,14 @@ function applySnapshot(m) {
   if ("maxY" in o) view.h = o.maxY;
   if ("centerX" in o) view.cx = o.centerX;
   if ("centerY" in o) view.cy = o.centerY;
-  
+  /*
+    The list has to cover EVERY setting that goes into options(). Whatever is
+    missing here is lost at every restore of the state: a bookmark, a paste,
+    the first exchange with the plugin. That is how the corner of the caption,
+    its margin and the transparency of its plate went missing silently: the
+    user set "bottom left", the plugin sent its own state, and the caption came
+    back to the bottom right corner.
+  */
   ["grid", "axis", "trace", "cross", "peak", "sign", "smooth", "multicolor",
    "autoquality", "precise", "quality", "penWidth", "accuracy", "decimals",
    "hSpacing", "vSpacing", "polarAngle", "calcTime", "overlapTime", "overlapDepth",
@@ -1455,13 +1892,14 @@ function applySnapshot(m) {
     if (k in o) opt[k] = o[k];
   });
   curves.length = 0;
-  (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null, editor: f.editor }));
+  (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null,
+    editor: f.editor, ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
   /*
-    Data series are restored along with the formulas. A snapshot with no series
-    field is either from an older release or came in through a share link: then
-    there are simply no series, and the list is emptied rather than left over
-    from the previous state. Otherwise a bookmark without data would bring back
-    somebody else's points on top of your own picture.
+    Series of data are restored together with the formulas. A snapshot with no
+    series field is one from an older release or one that arrived by link: then
+    there simply are no series, and the list is emptied rather than left over
+    from the previous state. Otherwise a bookmark with no data would bring
+    somebody else's points back on top of its own picture.
   */
   series.length = 0;
   previewOf = null;
@@ -1472,9 +1910,10 @@ function applySnapshot(m) {
   });
   emptiedByUser = curves.length === 0;
   /*
-    The other system's shelf comes from the snapshot when it carries one. An
-    old snapshot without shelves leaves the neighbour "never opened", and it
-    starts with the built-in example - exactly like a first run.
+    The shelf of the neighbouring system comes from the snapshot if the snapshot
+    brought one. An old snapshot with no shelves leaves the neighbouring system
+    "never opened", and it will start from the built-in example - exactly like a
+    first run.
   */
   {
     const cur = m.cs || el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
@@ -1487,6 +1926,8 @@ function applySnapshot(m) {
     shelf[cur] = null;
   }
   if (emptiedByUser) {
+    // We put out what was computed ourselves: the engine has nothing to answer an empty
+
     data.seg = [];
     data.overlaps = [];
     data.extremes = { max: [], min: [] };
@@ -1497,6 +1938,16 @@ function applySnapshot(m) {
   build();
 }
 
+// Bring the fields of the page to the current settings (after a state is loaded).
+/*
+  The height is set only while the ratio is off. With it on the height is
+  computed from the width and the field is locked: it is visible that the value
+  in it is a result rather than an entry.
+
+  Called from everywhere keepRatio can change: from the switch and from a
+  restore of the state (a bookmark, a paste, the first exchange with the
+  plugin).
+*/
 function syncLock() {
   const h = document.querySelector('[data-opt="maxY"]');
   if (h) h.readOnly = !!opt.keepRatio;
@@ -1504,6 +1955,9 @@ function syncLock() {
 
 function syncControls() {
   syncLock();
+  // The rows of the polar angle are shown together with everything else: keeping them
+  // apart means forgetting them one day when restoring from a bookmark.
+  syncPolarRows();
   el("tools").querySelectorAll("button[data-t]").forEach(b => {
     if (b.dataset.t in opt) b.setAttribute("aria-pressed", String(!!opt[b.dataset.t]));
   });
@@ -1527,13 +1981,39 @@ function syncControls() {
   el("qualityValue").textContent = opt.quality;
 }
 
+/* The demo standing in for the engine: the same shape of answers, only the browser computes. */
+/*
+  Standing in for the engine, the demo answers by the NUMBER of a formula in
+  the list rather than by its text: there is nothing to parse expressions with
+  when there is no engine. So the list of the demo is a function of the number,
+  one per formula of the panel.
+
+  It was not always so. In polar mode the demo drew a single rose whatever the
+  list held: the panel showed two formulas, one curve was on the screen, both
+  rows gave the same trace value, and an added formula changed nothing. Now a
+  number has a rose of its own, and the panel, the picture and the trace agree.
+*/
 const demoCartesian = [x => Math.sin(x), x => Math.cos(x) / 2, x => x * x / 8 - 2,
                        x => Math.exp(-x * x), x => Math.abs(x) - 1];
 
+// Roses with different numbers of petals: r = 2*cos(k*t), k of its own per number.
 const demoPolarPetals = [3, 2, 5, 4, 6];
 const demoPolarRadius = (i, t) =>
   2 * Math.cos(demoPolarPetals[i % demoPolarPetals.length] * t);
 
+/*
+  The intersections and extremes of the demo are computed from the points
+  already computed rather than taken from a list.
+
+  In polar mode the demo used to answer with an empty list of intersections,
+  and in cartesian with three points written into the code: they are right only
+  for the two default formulas. Add a third formula or switch to polar, and the
+  marks either disappeared entirely or stood in the wrong place.
+
+  Precision is not needed here: this is a demo, it has no engine. What is
+  needed is that the marks stand where the curves really meet, and that they
+  appear for any curves at all.
+*/
 function demoCrossings(list) {
   const found = [];
   const near = (x, y) => found.some(p => Math.hypot(p.x - x, p.y - y) < 0.05);
@@ -1565,6 +2045,11 @@ function segmentCross(ax, ay, bx, by, cx, cy, dx, dy) {
   return { x: ax + t * rx, y: ay + t * ry };
 }
 
+/*
+  Extremes by triples of neighbouring points. In cartesian mode the height is
+  compared, in polar mode the radius: there the curve goes round, and "higher"
+  means nothing.
+*/
 function demoPeaks(list, polar) {
   const max = [], min = [];
   const value = (x, y) => polar ? Math.hypot(x, y) : y;
@@ -1580,6 +2065,10 @@ function demoPeaks(list, polar) {
   }
   return { max, min };
 }
+
+// The coordinate system is taken from the page rather than from the message: only
+// build carries it, and options arrives without it. Because of that the demo went to
+// the cartesian branch on any change of a setting: the button stayed polar while the
 
 const demoPolarMode = message =>
   (message && message.cs ? message.cs
@@ -1622,7 +2111,16 @@ function demo(message) {
   }
   if (message.cmd === "trace") {
     const t = message.param;
-    
+    /*
+      The answer has to say which coordinate system the trace was computed in.
+      polar: false used to stand here always, and in polar mode the page took
+      the cartesian branch: the dashed line ran vertically at x = angle, and
+      fn(angle) was shown as the value instead of the radius.
+
+      With the plugin and with the engine in the browser this is invisible:
+      there the mark comes from the host and is right, so the self test of the
+      demo never caught the defect.
+    */
     const polar = demoPolarMode(message);
     const list = curves.map((c, i) => {
       if (!(c.on && c.trace)) return null;
@@ -1640,7 +2138,7 @@ function demo(message) {
     if (message.mode === "save") demoMarks[message.slot] = demoSnapshot();
     if (message.mode === "load" && demoMarks[message.slot])
       answer(Object.assign({ type: "snapshot" }, demoMarks[message.slot]));
-    // Clearing a slot. The only way to free it now that loading no longer does
+    // Clearing a cell. The only way to free it: loading now
     // so, and without this branch ten occupied slots would be a dead end.
     if (message.mode === "drop") demoMarks[message.slot] = null;
     answer({ type: "bookmarks", slots: demoMarks.map(Boolean) });
@@ -1655,9 +2153,22 @@ function demo(message) {
     answer({ type: "bookmarks", slots: demoMarks.map(Boolean) });
     return;
   }
-  
+  /*
+    size and signfont are nothing for the demo to do. It sees the size of the
+    canvas anyway, and choosing a font means a native dialog of the editor,
+    which does not exist in a browser. Passing over them silently is lawful
+    here and is said out loud: the command was handled, no answer is needed.
+  */
 }
 
+/*
+  The rest of the host protocol: bookmarks, the clipboard, the report.
+
+  The demo used to answer three commands out of ten, and seven buttons of the
+  panel did nothing, silently, on a page opened without the plugin: the report
+  stayed a stub, bookmarks were not remembered, copying did not copy. There
+  was not a single check on this - the self test ran the host path only.
+*/
 const demoMarks = new Array(10).fill(null);
 let demoClipboard = null;
 
@@ -1666,10 +2177,21 @@ function demoSnapshot() {
     cs: el("cs").querySelector('[aria-pressed="true"]').dataset.cs,
     options: options(),
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
-      color: opt.multicolor ? tone(i) : css(opt.penColor) }))
+      color: curveInk(c, i) }))
   };
 }
 
+/*
+  The report of the demo. The markup and the set of facts are the same as in
+  the host in wasmhost.js and in ReportFacts in the plugin: section.factbox, a
+  heading per formula, table.facts under it, then intersections and extremes.
+  Otherwise a reader who opened the page as a file sees a stump and decides
+  that the report in the product looks like that.
+
+  It is computed from the points already computed: the demo has no engine and
+  nothing to refine roots with, so a root is taken by a straight-line guess
+  between neighbouring points - and the note under the tables says so plainly.
+*/
 function demoReport() {
   const esc = s => String(s).replace(/[&<>]/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -1814,6 +2336,12 @@ function demoReport() {
   return '<div class="rep">' + out + html + "</div>";
 }
 
+/*
+  The list has to cover EVERY field of the settings drawer. Whatever is missing
+  here never reaches the engine, and the setting stays decoration: the field
+  changes and nothing happens. That is exactly how the grid step, the polar
+  angle and all the computation limits kept quiet.
+*/
 function options() {
   return {
     maxX: view.w, maxY: view.h, centerX: view.cx, centerY: view.cy,
@@ -1827,9 +2355,31 @@ function options() {
     overlapDepth: opt.overlapDepth,
     zoomIn: opt.zoomIn, zoomOut: opt.zoomOut,
     signLayout: opt.signLayout, signMargin: opt.signMargin, signBlend: opt.signBlend,
-    
-    canvasW: canvas.width, canvasH: canvas.height, markSpacing: opt.markSpacing,
+    /*
+      The size of the canvas and the smallest distance between marks. The host
+      needs this to thin the marks in PIXELS rather than in graph units: then
+      the gap between them on screen stays the same at any zoom.
 
+      The pixels here are CSS pixels, not device ones, and that is not a
+      detail. It used to send canvas.width - device pixels - and the promise of
+      the setting, "no closer than 14 pixels", held only at a scale of 100%: at
+      a density of 2 the gap became 7 visible pixels, at 0.8 it became 17.5.
+      Extremum marks are thinned by the page itself and in CSS pixels - two
+      kinds of marks lived by different rules on one canvas.
+
+      The plugin panel gets the size in a separate size message taken off
+      getBoundingClientRect - that is, in CSS pixels. It is the same here now,
+      and in the same units the page draws in.
+    */
+    canvasW: canvas.clientWidth, canvasH: canvas.clientHeight,
+    markSpacing: opt.markSpacing,
+    /*
+      The engine does not need these, but they have to travel into a bookmark,
+      into the session and into a share link. The colour of the pen never
+      reached here at all: it is chosen from a palette rather than from a field
+      with data-opt, and so it was found neither by eye nor by the markup. The
+      user changed the colour and the bookmark brought the old one back.
+    */
     keepRatio: opt.keepRatio, penColor: opt.penColor
   };
 }
@@ -1839,14 +2389,21 @@ function state() {
     cs: el("cs").querySelector('[aria-pressed="true"]').dataset.cs,
     /*
       The colour travels with the formula. The page draws the curves, and only
-      the page knows what the pen is set to and whether each formula gets a
-      colour of its own - without this field the report would colour its marks
-      at random and disagree with the picture. In the plugin the colour sits in
-      the formula itself; here it sits in the list.
+      it knows what the pen is set to and whether each formula has a colour of
+      its own - without this field the report would colour its marks at random
+      and disagree with the picture. In the component in the plugin the colour
+      lies in the formula itself; here it is in the list.
     */
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
-      color: opt.multicolor ? tone(i) : css(opt.penColor), editor: c.editor })),
+      color: curveInk(c, i), editor: c.editor,
+      ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
     cleared: emptiedByUser && curves.length === 0,
+    /*
+      Live pick-up is a setting of the PANEL rather than of the engine, so it
+      travels beside the state and not in options: options is a contract with
+      the host, and an extra key in it counts as a divergence.
+    */
+    live: liveCatch,
     /*
       Both shelves ride in the state: the sheet of the system the person is
       not looking at has to survive a reload just like the one on screen.
@@ -1855,7 +2412,8 @@ function state() {
       const cur = el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
       const out = {};
       out[cur] = {
-        formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor })),
+        formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor,
+          ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
         cleared: emptiedByUser && curves.length === 0
       };
       const other = cur === "rect" ? "polar" : "rect";
@@ -1896,20 +2454,35 @@ function sendOptions() {
   send(Object.assign({ cmd: "options" }, state()));
 }
 
+/*
+  A link to share. The whole state of the plot travels in the tail of the
+  address of the live demo: a person opens it and sees exactly your picture,
+  installing nothing. The tail after the hash never reaches the server at all -
+  not in the request, not in the log - so the formulas stay between you and
+  whoever you sent them to.
+
+  The address is taken from the page itself while it is open over the network:
+  then it is right always, both in the demo on the site and in any copy of it.
+  In the panel of the editor the page lies as a file and has no network address
+  of its own - there the site is filled in.
+
+  A version number stands at the head of the tail so that tomorrow's links do
+  not break yesterday's.
+*/
 const ShareSite = "https://pisarev.github.io/mathparser-live/demo/";
 const ShareMark = "#s=1.";
 
 /*
-  The mark saying a formula came from the editor does not travel in a link.
+  The mark "this formula came from the editor" does not travel in a link.
 
-  It belongs to the working session rather than to a portable document: whoever
-  opens the link has no editor, and a marked formula would take their pick-up
-  slot - the one slot that would then be overwritten silently.
+  It is about a working session, not about a portable document: whoever opens
+  the link has no editor, and a marked formula would take up their pick-up slot
+  - the single slot that would then be overwritten silently.
 
-  It is stripped RECURSIVELY. The mark does not sit in one place: it is in the
-  current list of formulas and in both sheet shelves inside sheets. Replacing one
-  field would leave the other two, while replacing by key through JSON covers the
-  whole tree at once - and covers whatever the state grows later.
+  It is cleared RECURSIVELY. The mark does not sit in one place: it is in the
+  current list of formulas and in both shelves of sheets. Replacing one field
+  would leave the other two, while replacing by key through JSON covers the
+  whole tree at once - and will cover whatever appears in the state later.
 */
 /*
   Along with the editor mark, a DATA SERIES is stripped from the link as well.
@@ -1930,26 +2503,26 @@ const withoutEditor = (key, value) =>
 /*
   READING A TABLE: text with numbers -> a series of points.
 
-  Asked for in issue #3: "adding a graph from a table written to a template, or
-  from an open csv with a choice of separator". The separator he asks to choose,
-  but it can almost always be guessed - a choice belongs where guessing fails,
-  not instead of guessing.
+  Asked for by the author of issue #3: "adding a plot from a table written to a
+  pattern, or from an opened csv with a choice of separator". The separator he
+  asks to choose, but it can nearly always be guessed - the choice is needed
+  where guessing is impossible, not instead of guessing.
 
-  The parsing lives on the PAGE, as does the parsing of a share link and of a
-  formula list from the clipboard: two implementations of one parser have
+  The reading lives ON THE PAGE, like the reading of a share link and of a list
+  of formulas from the clipboard: two implementations of one reading have
   already drifted apart once in this project, and the rule since then is one -
-  one parser in one place.
+  one reading in one place.
 
   What is genuinely hard here, and why this is not ten lines:
 
     separator   a semicolon here, a comma there, a tab out of a spreadsheet.
-                And a comma is also a decimal point - "1,5;2,5" - in which case
-                it cannot be the separator
-    header      a first row that is not numeric holds column names, not data
+                And a comma can be the decimal one - "1,5;2,5" - and then it
+                cannot be the separator
+    header      a first row that is not numeric holds column titles, not data
     columns     there can be more than two; the first two numeric ones are taken
-    rubbish     rows with a different number of columns, empty ones, comments
+    rubbish     rows with a different column count, empty ones, comments
 
-  EVERYTHING the caller may need is returned: the points, and how they were
+  Everything the caller might need comes back: the points, and how they were
   read. A separator guessed silently, with no way to ask about it, is exactly
   the case where a person cannot tell why the answer came out wrong.
 */
@@ -1970,10 +2543,61 @@ const TableSeps = [";", "\t", ",", " "];
 
 function tableNumber(s) {
   const t = String(s).trim().replace(",", ".").replace(/\s/g, "");
-  if (!t || !/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return null;
+  /*
+    A trailing full stop does not count as a number: `1.` in a table is nearly
+    always an item of a numbered list rather than a number. Measured on
+    19.08.2026, issue #4: lines like `1. Heading` were getting into the data.
+    The separating full stop is untouched - `1.5` and `.5` still read as before.
+  */
+  if (!t || !/^[+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?$/.test(t)) return null;
   const v = parseFloat(t);
   return Number.isFinite(v) ? v : null;
 }
+
+/*
+  SEVERAL TABLES IN ONE SELECTION.
+
+  Measured on 19.08.2026, issue #4: a person selected two blocks in a row -
+  each with its own `x;y` header, a blank line between them - and got ONE
+  series of ten points instead of two of five. The reading took the whole
+  piece at once: blank lines were thrown away before reading, and a header was
+  looked for only on the first line.
+
+  A blank line ends a block, and so does a header line that comes after lines
+  of numbers: in the second case a person separates tables not with a gap but
+  with a caption (`test1`, `test2` in that same screenshot).
+
+  A list of tables comes back. An empty one means no tables were found at all,
+  and the caller reads the selection as formulas, exactly as before.
+*/
+function parseTables(text) {
+  const raw = String(text || "").split(/\r?\n/);
+  const blocks = [];
+  let block = [];
+  const flush = () => { if (block.length) blocks.push(block); block = []; };
+  const numeric = line => {
+    const cells = line.split(/[;\t,]|\s+/).map(s => s.trim()).filter(Boolean);
+    return cells.length >= 2 && tableNumber(cells[0]) !== null;
+  };
+  let seenNumbers = false;
+  for (const line of raw) {
+    const s = line.trim();
+    if (!s) { flush(); seenNumbers = false; continue; }
+    if (s.startsWith("#") || s.startsWith("//")) continue;
+    if (!numeric(s) && seenNumbers) { flush(); seenNumbers = false; }
+    if (numeric(s)) seenNumbers = true;
+    block.push(line);
+  }
+  flush();
+
+  const out = [];
+  for (const b of blocks) {
+    const one = parseTable(b.join("\n"));
+    if (one) out.push(one);
+  }
+  return out;
+}
+
 function parseTable(text) {
   const lines = String(text || "").split(/\r?\n/)
     .map(s => s.trim())
@@ -2002,7 +2626,7 @@ function parseTable(text) {
       for (const c of r.slice(0, 2)) { cells++; if (num(c) !== null) good++; }
     }
     const score = cells ? good / cells : 0;
-    // On an equal score the separator named earlier wins: a semicolon and a tab
+    // On an equal count the separator named earlier wins: the semicolon
     // are less ambiguous than a comma, and a comma than a space.
     if (!best || score > best.score + 1e-9) best = { sep, rows, score };
   }
@@ -2025,7 +2649,6 @@ function parseTable(text) {
   return {
     sep: best.sep, points: points, skipped: skipped,
     columns: best.rows[0].length, header: header,
-    // The name of the series comes from the header when there is one: it is
     // easier to recognise your own column that way.
     name: header && header[1] ? String(header[1]) : ""
   };
@@ -2042,6 +2665,7 @@ function shareLink() {
   return here + ShareMark + code;
 }
 
+// The state out of a link. null when it is not our link or the tail is damaged.
 function shareState(text) {
   const at = String(text || "").indexOf(ShareMark);
   if (at < 0) return null;
@@ -2071,9 +2695,224 @@ const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;"
 const eyeOn = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/></svg>';
 const eyeOff = '<svg viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a17.4 17.4 0 0 1-3.2 3.8M6.5 7.6A16.8 16.8 0 0 0 2 12s3.6 7 10 7c1.4 0 2.6-.3 3.8-.8"/></svg>';
 
+// The panel of functions: a row per curve - colour, text, the live trace value, controls.
+/*
+  THE LOOK OF ONE CURVE - a small window beside its row.
+
+  It opens on a click on the circle. Three things inside: colour, width, dash -
+  and a "same as the rest" button that clears all three at once. An empty
+  choice in each row means "same as the rest": that way a person sees they set
+  nothing, rather than that they set something which happened to match.
+
+  One window per panel: opening a second closes the first. It closes on a click
+  outside, on Esc and on any redraw of the list - otherwise it would hang over
+  a row that is no longer there.
+
+  Issue #4 from bms-2015.
+*/
+let penPop = null;
+
+function closePen() {
+  if (!penPop) return;
+  penPop.remove();
+  penPop = null;
+  document.removeEventListener("mousedown", penAway, true);
+}
+
+function penAway(ev) {
+  if (penPop && !penPop.contains(ev.target)) closePen();
+}
+
+function openPen(anchor, index) {
+  const already = penPop && penPop.dataset.for === String(index);
+  closePen();
+  if (already) return;
+  const c = curves[index];
+  if (!c) return;
+
+  const box = document.createElement("div");
+  box.className = "pen-pop";
+  box.dataset.for = String(index);
+
+  const inks = palette.map(name => css(name));
+  const widths = [1, 2, 3];
+  const dashes = ["solid", "dash", "dot", "dashdot"];
+  const dashName = { solid: "Solid", dash: "Dashed", dot: "Dotted",
+                     dashdot: "Dash-dot" };
+  // The sample line is drawn with the same dash pattern as the curve itself: the button
+
+  const sample = kind => {
+    const d = Dashes[kind];
+    return '<svg viewBox="0 0 26 10" aria-hidden="true">'
+         + '<path d="M1 5H25" fill="none" stroke="currentColor" stroke-width="2"'
+         + (d ? ' stroke-dasharray="' + d.join(' ') + '"' : '') + '/></svg>';
+  };
+
+  box.innerHTML =
+    '<div class="cap">Colour</div>' +
+    '<div class="inks">' +
+      inks.map(v => '<button data-ink="' + v + '" style="background:' + v + '"'
+             + ' title="' + v + '" aria-pressed="' + (c.ink === v) + '"></button>').join('') +
+    '</div>' +
+    '<div class="cap">Width</div>' +
+    '<div class="picks widths">' +
+      widths.map(w => '<button data-wide="' + w + '" title="Width' + w + '"'
+             + ' aria-pressed="' + (c.wide === w) + '">'
+             + '<svg viewBox="0 0 26 10" aria-hidden="true"><path d="M1 5H25"'
+             + ' fill="none" stroke="currentColor" stroke-width="' + w + '"/></svg>'
+             + '</button>').join('') +
+    '</div>' +
+    '<div class="cap">Line</div>' +
+    '<div class="picks dashes">' +
+      dashes.map(k => '<button data-dash="' + k + '" title="' + dashName[k] + '"'
+             + ' aria-pressed="' + ((c.dash || "solid") === k) + '">'
+             + sample(k) + '</button>').join('') +
+    '</div>' +
+    '<button class="reset">Same as the rest</button>';
+
+  document.body.appendChild(box);
+  const at = anchor.getBoundingClientRect();
+  // The window must not run off the edge of the panel: it is narrow, and there is little room on the right.
+  const wide = box.offsetWidth;
+  let left = at.left + window.scrollX;
+  if (left + wide > window.innerWidth - 8) left = window.innerWidth - wide - 8;
+  box.style.left = Math.max(8, left) + "px";
+  box.style.top = (at.bottom + window.scrollY + 6) + "px";
+
+  const apply = () => { closePen(); drawPanel(); paint(); };
+  box.querySelectorAll("[data-ink]").forEach(b => {
+    b.onclick = () => { c.ink = (c.ink === b.dataset.ink) ? null : b.dataset.ink; apply(); };
+  });
+  box.querySelectorAll("[data-wide]").forEach(b => {
+    const w = Number(b.dataset.wide);
+    b.onclick = () => { c.wide = (c.wide === w) ? null : w; apply(); };
+  });
+  box.querySelectorAll("[data-dash]").forEach(b => {
+    const k = b.dataset.dash;
+    b.onclick = () => { c.dash = (k === "solid") ? null : k; apply(); };
+  });
+  box.querySelector(".reset").onclick = () => {
+    c.ink = null; c.wide = null; c.dash = null; apply();
+  };
+
+  penPop = box;
+  document.addEventListener("mousedown", penAway, true);
+}
+
+/*
+  Editing a formula in a row of the list.
+
+  The input ends in three ways, and all three have to be there: Enter accepts,
+  Escape abandons, and moving away with the mouse also accepts (the person
+  clicked past it rather than changed their mind; one who changed their mind
+  presses Escape).
+
+  An edit is destructive: the old text is gone. So it goes through the same
+  undo machinery as removal and clearing.
+*/
+/*
+  Whether an edit is going on right now.
+
+  While the field is open, the live roads from the editor keep quiet: the
+  pick-up sends a suggest on every movement of the mouse, the handler calls
+  drawPanel, and that builds the rows anew - and the open field dies together
+  with what was typed into it. Found by the audit of 20.08.2026, section 10 of
+  #FULL-AUDIT: your own state goes stale because of somebody else's context.
+
+  Deliberate actions of the person - Alt+Shift+G, a paste - do not keep quiet:
+  they started them, and answering with silence would be worse.
+*/
+let rowEditing = false;
+/*
+    The guard asks the EDIT ITSELF, not a flag about it.
+
+    It used to ask `rowEditing` - a global flag that finish() of an already
+    closed editor takes down. It drifts apart from the markup: the bench scene
+    caught "pickup true, editing false" with the field open, and the pickup took
+    the row away along with what was typed. A flag mirrors the fact, and a
+    mirror can drift; the edit field is either in the markup or it is not.
+  */
+  const editing = () => !!document.querySelector('#panelList .pf-edit');
+
+/*
+  How to abandon an edit when the row is taken away without asking.
+
+  The list is redrawn from a dozen places - a bookmark, an undo, a clear, a
+  table arriving - and the edit field disappears together with the row.
+  Leaning on blur fails twice over: it does not arrive in every browser when an
+  element is removed, and, more to the point, blur ACCEPTS the edit - so
+  something half-typed would go to the panel on top of what the bookmark had
+  just restored.
+
+  So a redraw from elsewhere CANCELS the edit rather than accepting it.
+*/
+let rowEditCancel = null;
+
+function editRow(row, index) {
+  const c = curves[index];
+  if (!c) return;
+  const span = row.querySelector(".pf-text");
+  if (!span) return;
+  const box = document.createElement("input");
+  box.className = "pf-edit";
+  box.spellcheck = false;
+  box.value = c.text;
+  /*
+    The editing flag goes up BEFORE the field becomes reachable.
+
+    It used to be set after replaceWith, focus and select - and between the
+    field appearing and the flag going up there was a window in which the edit
+    was OPEN and the guard was down. Anything arriving in that window sees an
+    open edit with no flag, calls drawPanel and takes the field away along with
+    whatever was typed; focus wakes handlers by itself. The bench scene caught
+    it every other run and so looked flaky.
+  */
+  rowEditing = true;
+  span.replaceWith(box);
+  box.focus();
+  box.select();
+
+  let done = false;
+  const finish = keep => {
+    if (done) return;
+    done = true;
+    rowEditing = false;
+    rowEditCancel = null;
+    const next = box.value.trim();
+    if (keep && next && next !== c.text) {
+      remember("editing formula" + c.text);
+      c.text = next;
+      // Edited by hand means no longer picked up: otherwise the next movement
+
+      c.editor = false;
+      c.from = null;
+      histAdd(next);
+      drawPanel();
+      build();
+    } else {
+      drawPanel();
+    }
+  };
+
+  box.onkeydown = e => {
+    // Key presses do not escape outwards: out there Escape closes windows and Enter draws.
+    e.stopPropagation();
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+  };
+  box.onblur = () => finish(true);
+  rowEditCancel = () => finish(false);
+}
+
 function drawPanel() {
+  // The look window is tied to the circle of one particular row, and the rows here are
+
+  closePen();
+  // An edit in a row goes the same way: the row will be gone, and accepting something
+
+  if (rowEditCancel) rowEditCancel();
   el("fnCount").textContent = curves.length;
-  // Series are named only when there are any: a line "series 0" in the heading
+  // Series are named only when there are any: a "series 0" line in the heading would be
   // would be noise for those who never open a table at all.
   el("serNum").textContent = series.length;
   el("serCount").hidden = series.length === 0;
@@ -2085,21 +2924,47 @@ function drawPanel() {
     const row = document.createElement("div");
     row.className = "pf-row" + (c.on ? "" : " off");
     row.innerHTML =
-      '<i class="pf-swatch" style="background:' + tone(i) + '"></i>' +
+      '<button class="pf-swatch" title="The look of this curve" aria-label="The look of this curve"' +
+        ' style="background:' + curveInk(c, i) + '"></button>' +
       '<span class="pf-text" title="' + esc(c.text) + '">' + esc(c.text) + '</span>' +
       '<span class="pf-val dim" id="pfv' + i + '">-</span>' +
       '<span class="pf-ctrls">' +
         '<button class="pf-btn trace" title="Live tracing of this curve" aria-pressed="' + c.trace + '">' +
           '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg></button>' +
+        '<button class="pf-btn copy" title="Copy the formula">' +
+          '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/>' +
+          '<path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>' +
         '<button class="pf-btn eye" title="' + (c.on ? "Hide" : "Show") + '">' + (c.on ? eyeOn : eyeOff) + '</button>' +
         '<button class="pf-btn kill" title="Remove">' +
           '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
       '</span>';
-    const [trace, eye, kill] = row.querySelectorAll(".pf-btn");
+    /*
+      Editing a formula by double-clicking the formula itself. Issue #5 from
+      bms-2015.
+
+      There used to be nothing to correct a drawn formula with: only remove it
+      with the cross and type it again in the input field. For a typo in one
+      character that is a lot.
+
+      The edit happens IN PLACE rather than in the input field below: the input
+      field holds the current formula, and replacing its content would lose
+      whatever was typed there.
+    */
+    row.querySelector(".pf-text").ondblclick = () => editRow(row, i);
+    row.querySelector(".pf-swatch").onclick = ev => {
+      ev.stopPropagation();
+      openPen(ev.currentTarget, i);
+    };
+    const [trace, copy, eye, kill] = row.querySelectorAll(".pf-btn");
+    copy.onclick = () => {
+      // A confirmation is needed: without it a person does not know whether anything happened.
+      copy.title = copyText(c.text) ? "Copied" : "The clipboard is out of reach";
+      setTimeout(() => { copy.title = "Copy the formula"; }, 1500);
+    };
     trace.onclick = () => { c.trace = !c.trace; drawPanel(); build(); };
     eye.onclick = () => { c.on = !c.on; drawPanel(); build(); };
     kill.onclick = () => {
-      // Removing a curve is destructive too, and is undone by the same mechanism.
+      // Removing a curve is destructive too, and is undone by the same machinery.
       remember("removal of formula " + (c.text || i + 1));
       curves.splice(i, 1);
       if (!curves.length) emptiedByUser = true;
@@ -2109,20 +2974,34 @@ function drawPanel() {
     box.appendChild(row);
   });
   /*
-    Data series stand in the same list, below the formulas.
+    Series of data stand in the same list, below the formulas.
 
-    They get no panel of their own: the function list is the list of what is
-    drawn, and a series belongs there with the curves. Without a row in the list
-    a series would be a dead end - you paste a table and have no way to remove
-    it, exactly as it was with bookmarks.
+    They get no panel of their own: the list of functions IS the list of what
+    is drawn, and a series belongs where the curves are. Without a row in the
+    list a series would be a dead end - you paste a table and have nothing to
+    remove it with, exactly as it was with bookmarks.
 
-    A series has no tracing: tracing is run by the engine along a formula, and
+    A series has no trace: the trace is led by the engine along a formula, and
     there is no formula behind a series. The button is not shown at all - one
-    shown and not working is worse than one absent.
+    that is shown and does not work is worse than one that is absent.
   */
   series.forEach((s, i) => {
     const row = document.createElement("div");
     row.className = "pf-row data" + (s.on ? "" : " off") + (s.editor ? " shown" : "");
+    /*
+      What is a preview IS CALLED a preview, and that is not decoration of the
+      caption.
+
+      On the live panel on 17.08.2026 a preview series stood in the list
+      exactly like one taken for good. And it will disappear on its own, at the
+      very next movement in the editor - and a person would read that as their
+      data going missing.
+
+      The mark stands where "first ones shown" and "rows skipped" stand: those
+      are all caveats about one thing - what series is in front of you and what
+      to expect of it. A name will not do here: for a table with a header it
+      comes from the csv, and the mark would vanish in half the cases.
+    */
     /*
       SHORT ON THE SCREEN, FULL IN THE TOOLTIP. Measured on 17.08.2026: the
       label column is 102 px, while the label with all its caveats asks for 253
@@ -2148,14 +3027,14 @@ function drawPanel() {
         + css(palette[(curves.length + i) % palette.length]) + '"></i>' +
       '<span class="pf-text" title="' + esc(title) + '">' + esc(label) + '</span>' +
       /*
-        The empty column of the live value is GONE from a series row.
+        A series NO LONGER HAS the empty column of the live value.
 
-        It stood here so that the columns of series rows and of formula rows
+        It stood here so that the columns of a series row and of a formula row
         would line up. They stopped lining up the moment a series row needed a
-        right padding for the controls: without it the choice of fit ended up
-        underneath the buttons. Keeping a dash for an alignment that no longer
-        exists means spending sixteen pixels on nothing - and those are exactly
-        the pixels the label was short of.
+        right padding for its controls: otherwise the choice of fit ended up
+        under the buttons. Keeping a dash for an alignment that no longer
+        exists means spending sixteen pixels on nothing - and sixteen pixels is
+        exactly what the caption is short of.
       */
       /*
         The kind is chosen from a list OF OUR OWN, not a system select.
@@ -2197,7 +3076,7 @@ function drawPanel() {
     const [eye, kill] = row.querySelectorAll(".pf-btn");
     eye.onclick = () => { s.on = !s.on; drawPanel(); paint(); };
     kill.onclick = () => {
-      // Removing a series is destructive, and is undone by the same mechanism.
+      // Removing a series is destructive, and is undone by the same shared machinery.
       remember("removal of data series" + (s.name ? " " + s.name : ""));
       series.splice(i, 1);
       drawPanel();
@@ -2296,9 +3175,9 @@ function fitPicker(face, pick) {
 }
 
 /*
-  Walking the list and leaving it. The handlers are shared rather than per row:
-  the list lives from one press to one choice, and hanging three listeners on
-  every row each time is work for nothing.
+  Walking the list and leaving it. The handlers are shared rather than one per
+  row: the list lives from a press to a choice, and hanging three listeners on
+  it every time is wasted work for nothing.
 */
 document.addEventListener("keydown", e => {
   if (!fitOpen) return;
@@ -2319,11 +3198,11 @@ document.addEventListener("keydown", e => {
 addEventListener("pointerdown", e => {
   if (fitOpen && !fitOpen.list.contains(e.target) && e.target !== fitOpen.face) closeFit();
 });
-// The list stands where the button stands: move the button and the list points
 // at nothing.
 addEventListener("scroll", closeFit, true);
 addEventListener("resize", closeFit);
 
+// The live trace value of each curve: its point under the cursor - y or radius.
 function paintTraceValues() {
   const live = opt.trace && cursor && data.trace;
   el("panel").classList.toggle("tracing", !!live);
@@ -2339,6 +3218,14 @@ function paintTraceValues() {
     if (live && c.on && c.trace) {
       const p = data.trace.points.find(q => q.i === i);
       if (p && isFinite(p.y)) {
+        /*
+          In polar mode the radius is shown WITH ITS SIGN - the projection of
+          the point onto the ray, not a length. Math.hypot used to stand here
+          and the sign was lost: for X * Sin(X * 9) at 148.01 degrees the radius
+          is -2.458, the point goes to the opposite ray, and the panel printed
+          +2.458. The pair "angle and radius" described a point other than the
+          one drawn, and that read as the trace missing.
+        */
         text = data.trace.polar
           ? (p.x * Math.cos(data.trace.param) + p.y * Math.sin(data.trace.param)).toFixed(dec)
           : (+p.y).toFixed(dec);
@@ -2381,31 +3268,32 @@ const SeriesLimit = 20000;
 */
 let previewOf = null;
 
-function dropPreview() {
+function dropPreview(kind) {
+  // With kind given, only what that road showed is removed; otherwise everything temporary.
+  const mine = one => one.editor && (!kind || (one.from || "preview") === kind);
   for (let i = curves.length - 1; i >= 0; i--)
-    if (curves[i].editor) curves.splice(i, 1);
+    if (mine(curves[i])) curves.splice(i, 1);
   for (let i = series.length - 1; i >= 0; i--)
-    if (series[i].editor) series.splice(i, 1);
-  // The mark "this has already been shown" comes off along with the preview.
-  // Otherwise a person who cleared the panel and selected the same block again
-  // would see nothing: the cut-off for repeats would count the selection as old.
+    if (mine(series[i])) series.splice(i, 1);
+  // The mark "this is already shown" is cleared together with the preview. Otherwise a
+  // person who cleared the panel and selected the same piece again would see nothing:
+
   previewOf = null;
 }
 
 function addSeries(table, preview) {
   if (!table || !table.points || table.points.length < 2) return;
-  // The ceiling on the number of points is said out loud, and so is the cut:
-  // to take the first twenty thousand silently and draw them as the whole
-  // series is to lie about the data.
+    // series is to lie about the data.
   const cut = table.points.length > SeriesLimit;
   series.push({
     name: table.name || ("series " + (series.length + 1)),
     points: cut ? table.points.slice(0, SeriesLimit) : table.points,
     cut: cut, skipped: table.skipped || 0, sep: table.sep, on: true,
-    editor: !!preview
+    editor: !!preview,
+    // A table series is shown by a selection only: the pick-up of a line carries no tables.
+    from: "preview"
   });
-  // A preview does not count as an intention of the person: it does not undo
-  // the fact that the list was emptied on purpose, and it goes away by itself
+  // A preview does not count as an intention of the person: it does not cancel
   // with the next selection.
   if (!preview) emptiedByUser = false;
   drawPanel();
@@ -2477,7 +3365,6 @@ function fitSeries(points, kind, degree) {
       ssRes += (p.y - v) * (p.y - v);
       ssTot += (p.y - mean) * (p.y - mean);
     }
-    // Constant y: there is no spread at all, and the share explained is zero
     // over zero.
     if (!(ssTot > 0)) return { r2: null, ssRes: ssRes };
     return { r2: 1 - ssRes / ssTot, ssRes: ssRes };
@@ -2518,7 +3405,7 @@ function fitSeries(points, kind, degree) {
     }
     if (n < 2) return null;
     const d = n * suu - su * su;
-    if (!(Math.abs(d) > 0)) return null;   // all u the same - there is no slope
+    if (!(Math.abs(d) > 0)) return null;   // every u is the same - there is no slope
     return { a: (n * suv - su * sv) / d, b: (suu * sv - su * suv) / (d) };
   };
 
@@ -2643,12 +3530,12 @@ function fitSeries(points, kind, degree) {
 }
 
 /*
-  Fit a formula to a series and lay it down as a curve.
+  Fit a formula to a series and put it down as a curve.
 
-  The result is an ordinary formula string, and from there everything already
-  written works on it. The caveat is shown BESIDE the result rather than hidden
-  in a tooltip: without it R^2 reads as a measure of truth, while it is a
-  measure of agreement, and it grows by itself with the number of coefficients.
+  The result is an ordinary formula row, and everything written works with it
+  from there on. The caveat is shown BESIDE the result rather than hidden in a
+  hint: without it R^2 reads as a measure of truth, while it is a measure of
+  agreement, and it grows by itself with the number of coefficients.
 */
 /*
   A CAVEAT LIVES EXACTLY AS LONG AS THE CURVE IT EXPLAINS.
@@ -2677,6 +3564,7 @@ function syncFitNote() {
   box.hidden = true;
   fitNoteFor = null;
 }
+
 function applyFit(s, kind, degree) {
   const box = el("fitNote");
   const r = fitSeries(s.points, kind, degree);
@@ -2687,13 +3575,13 @@ function applyFit(s, kind, degree) {
     box.hidden = false;
     return;
   }
-  // A new curve - nothing destructive here, but the list changes, and it has to
-  // be returnable to the person by the same means as always.
+  // A new curve - nothing destructive here, but the list changes, and being able to
+
   remember("formula fitted to series" + (s.name ? " " + s.name : ""));
   curves.push({ text: r.text, on: true, trace: true, color: null, editor: false });
   emptiedByUser = false;
   const q = r.quality;
-  // One typeface for the whole paragraph: R^2 in the caption and R^2 in the
+  // One face for the whole paragraph: R^2 in the caption and R^2 in the caveat. The
   // caveat. A superscript next to a flat spelling reads as two different things.
   const r2 = q && q.r2 !== null && q.r2 !== undefined
     ? "R^2 = " + q.r2.toFixed(4)
@@ -2705,75 +3593,193 @@ function applyFit(s, kind, degree) {
   drawPanel();
   build();
 }
+
 const marks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+/*
+  THE MENU OF AN OCCUPIED CELL: overwrite and clear.
+
+  Both actions used to live in modifiers alone - Ctrl and Shift - and a person
+  learned of them from the hint or did not learn of them at all. The remark
+  from bms-2015: make the cell a split button so that the arrow opens what was
+  hidden.
+
+  The modifiers have gone nowhere: whoever knows them is quicker. The menu is
+  for everybody else.
+*/
+let markMenu = null;
+
+function closeMarkMenu() {
+  if (!markMenu) return;
+  markMenu.remove();
+  markMenu = null;
+  document.removeEventListener("mousedown", markAway, true);
+}
+
+function markAway(ev) {
+  if (markMenu && !markMenu.contains(ev.target)) closeMarkMenu();
+}
+
+function openMarkMenu(anchor, slot) {
+  const already = markMenu && markMenu.dataset.slot === String(slot);
+  closeMarkMenu();
+  if (already) return;
+
+  const box = document.createElement("div");
+  box.className = "pen-pop mark-menu";
+  box.dataset.slot = String(slot);
+  box.innerHTML =
+    '<button class="reset" data-do="save">Write over</button>' +
+    '<button class="reset" data-do="drop">Clear</button>';
+  document.body.appendChild(box);
+
+  const at = anchor.getBoundingClientRect();
+  const wide = box.offsetWidth;
+  let left = at.right + window.scrollX - wide;
+  if (left < 8) left = 8;
+  box.style.left = left + "px";
+  // The cells stand at the bottom edge of the panel, so the menu opens UPWARDS.
+  box.style.top = (at.top + window.scrollY - box.offsetHeight - 6) + "px";
+
+  box.querySelectorAll("[data-do]").forEach(b => {
+    b.onclick = () => {
+      closeMarkMenu();
+      send({ cmd: "bookmark", slot: slot, mode: b.dataset.do });
+    };
+  });
+
+  markMenu = box;
+  document.addEventListener("mousedown", markAway, true);
+}
+
 function drawMarks() {
+  closeMarkMenu();
   const box = el("marks");
   box.innerHTML = "";
   marks.forEach((full, i) => {
+    const cell = document.createElement("div");
+    cell.className = "mark" + (full ? " split" : "");
     const b = document.createElement("button");
+    b.className = "mark-face" + (full ? " full" : "");
     b.textContent = i + 1;
-    b.className = full ? "full" : "";
     /*
-      Being occupied is a property of the STORAGE: is there something in the
-      slot. Restoring does not clear it, and one bookmark can be returned to as
+      Being occupied is a property of the STORE: whether something lies in the
+      cell. Restoring does not clear it, and one bookmark can be returned to as
       many times as you like.
 
-      Before, being occupied was a property of the switch: click after click
-      went remember - restore - remember, while the storage itself did not
-      survive a load (BookmarkSlot erased the file of the slot). The remark in
-      issue #3 was about exactly this: "the user tacitly assumes it is
-      remembered".
+      It used to be the state of a toggle: click after click went save -
+      restore - save, and the store itself did not survive a load
+      (BookmarkSlot wiped the file of the cell). The remark in issue #3 was
+      about exactly this: "the user quietly assumes it is remembered".
 
-      The price of predictability is named honestly: a bookmark can no longer be
-      updated by a single click, there is a gesture for that. Both gestures are
-      written in the tooltip - without that, clearing would become secret
-      knowledge, and ten occupied slots with no way out would be a dead end.
+      Overwrite and clear are now on a button as well as on a gesture. The
+      gestures stayed in the hint: they are quicker, and a check on the stand
+      watches that the hint about them does not fall silent.
     */
     b.title = full
       ? "Restore state " + (i + 1)
         + "\nCtrl+click - write over, Shift+click - clear"
       : "Remember state " + (i + 1);
     b.onclick = e => {
-      // Shift before Ctrl: both held down means clearing, which makes more
-      // sense than writing over. On an empty slot there is nothing to clear,
-      // and saving silently instead of clearing would be the worst of the
+      // Shift before Ctrl: with both held it is a clear, which makes more sense than an overwrite.
+      // In an empty cell there is nothing to clear, and a silent save instead of a clear
       // answers - better to do nothing.
       let mode = "save";
       if (full) mode = e.shiftKey ? "drop" : e.ctrlKey ? "save" : "load";
       else if (e.shiftKey) return;
-
+      // A flash: a restore leaves no visible trace other than the plot itself.
       b.classList.remove("pulse");
       void b.offsetWidth;
       b.classList.add("pulse");
       send({ cmd: "bookmark", slot: i, mode });
     };
-    box.appendChild(b);
+    cell.appendChild(b);
+
+    if (full) {
+      const caret = document.createElement("button");
+      caret.className = "mark-caret";
+      caret.title = "Write over or clear";
+      caret.setAttribute("aria-label", "What to do with bookmark" + (i + 1));
+      caret.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true">'
+                      + '<path d="M2 4.5L6 8.5L10 4.5" fill="none"'
+                      + ' stroke="currentColor" stroke-width="1.8"/></svg>';
+      caret.onclick = ev => { ev.stopPropagation(); openMarkMenu(cell, i); };
+      cell.appendChild(caret);
+    }
+    box.appendChild(cell);
   });
 }
 
 const canvas = el("plot");
 const ctx = canvas.getContext("2d");
 let cursor = null;
-
+// The width of the strip of zoom buttons: measured in size(), read while drawing.
 let zoomDodge = 0;
 
 function size() {
   const r = canvas.parentElement.getBoundingClientRect();
-
+  // Before the layout the canvas is of zero size: there is nothing to compute from, so we wait for a size.
   if (r.width < 2 || r.height < 2) { setTimeout(size, 16); return; }
   const d = window.devicePixelRatio || 1;
   const w = Math.round(r.width * d);
   const h = Math.round(r.height * d);
-  if (w === canvas.width && h === canvas.height) return;
-  canvas.width = w;
-  canvas.height = h;
-  ctx.setTransform(d, 0, 0, d, 0, 0);
-  
+  /*
+    The size is the same - the canvas is left alone and no recount is asked
+    for.
+
+    Assigning canvas.width wipes the canvas EVEN when the value is unchanged,
+    and a build used to go out from here right after. That is what closed the
+    circle: the recount raised the "working..." strip, the strip took its
+    height from the scene, the observer caught the jump and scheduled a
+    relayout, the curves arrived, the strip went out, the height came back -
+    and it all began again. Measured on a docked panel: 36 rebuilds in 20
+    seconds of complete stillness, 437 ms of computation each. Exactly the
+    flicker the author of issue #2 wrote about.
+  */
+  /*
+    The early return guards the CANVAS, not the ratio.
+
+    Assigning canvas.width clears the canvas even when the value is unchanged,
+    and build() at the tail used to close a loop: a rebuild raised the "working"
+    bar, the bar took height from the stage, the observer caught the change and
+    ordered a relayout, the curves arrived, the bar went out, the height came
+    back - and it all started again. Measured on a docked panel: 36 rebuilds
+    before it settled.
+
+    But the square-cell recalculation fell under the same guard, and it has
+    nothing to do with the jitter. Turn proportions back on without changing the
+    size and nothing happened: the demo self test calls this "turning proportions
+    back on squares the cell again", and it failed - in the released 1.3.2 too.
+
+    So the canvas is touched only when the size changes, the cell is recomputed
+    always, and we leave early only when NOTHING changed.
+  */
+  const sizeChanged = w !== canvas.width || h !== canvas.height;
+  if (sizeChanged) {
+    canvas.width = w;
+    canvas.height = h;
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  const wasHalfHeight = view.h;
+  /*
+    A cell has to be square, or a curve lies about how steep it is. The ratio
+    is taken from the same values the drawing uses - clientWidth and
+    clientHeight of the canvas. The rectangle of the parent is fractional
+    (522.4 against 522 for the canvas), and that made the cell out of square by
+    eight hundredths of a per cent: invisible to the eye, but the check for
+    equality to one failed, and failed on the merits. If the canvas has no size
+    yet, the ratio is taken from the parent - that one is already checked above.
+  */
   if (opt.keepRatio)
     view.h = view.w * (canvas.clientWidth > 0
       ? canvas.clientHeight / canvas.clientWidth
       : r.height / r.width);
-  
+  if (!sizeChanged && view.h === wasHalfHeight) return;
+  /*
+    The width of the strip of zoom buttons, for the legend to step around.
+    Measured here because the layout is being recomputed here anyway; inside the
+    drawing such a measurement would cost a recompute on every frame.
+  */
   const zoomBox = document.getElementById("zoombox");
   zoomDodge = zoomBox ? zoomBox.getBoundingClientRect().width + 10 : 0;
 
@@ -2788,9 +3794,38 @@ const toY = (y, h) => h - (y - view.cy + view.h) / (view.h * 2) * h;
 const fromX = (px, w) => px / w * view.w * 2 - view.w + view.cx;
 const fromY = (py, h) => (h - py) / h * view.h * 2 - view.h + view.cy;
 
+/*
+  The geometry of the trace line. Kept apart from the drawing for two reasons:
+  selftest.html checks it, and both cases can be seen side by side.
+
+  The line follows the parameter the points were computed with, NOT the raw
+  cursor: the values arrive from the engine with a delay, and a line tied to
+  the cursor ran ahead - a gap opened between it and the point.
+
+  In polar mode the parameter is an angle in the coordinates of the PLOT, where
+  the Y axis points up, while on the canvas it points down. That is why the
+  sine is taken with a minus: without it the line mirrors horizontally and
+  walks off to the other side of the point.
+*/
 function traceGeometry(w, h) {
   if (!data.trace) return null;
   if (data.trace.polar) {
+    /*
+      The ray is built IN THE MODEL and taken to the screen by the same toX/toY
+      as the points of the trace. It used to take its direction straight in
+      pixels - the cosine and sine of the angle laid out along the screen axes -
+      and that is right ONLY while a pixel is the same size in X and in Y.
+
+      When the scales differ, a ray of the model lands on the screen at a
+      DIFFERENT slope, and the dashed line walks away from its own points.
+      Measured on a frame from the user on 13.08.2026: 237 pixels per unit in X,
+      225.5 in Y, a difference of 5%; at an angle of 206.09 and a radius of 2.94
+      the point lands correctly, while the dashed line drawn at the same
+      distance goes down by 306 pixels instead of 291 - about fifteen pixels
+      out, and steady, not depending on the movement of the mouse. Resizing the
+      window recomputes the height of the view, the scales are equal again - and
+      the miss disappears. That was the sign.
+    */
     const far = (Math.hypot(view.w, view.h) + Math.hypot(view.cx, view.cy)) * 4;
     const c = Math.cos(data.trace.param), s = Math.sin(data.trace.param);
     return { x1: toX(-c * far, w), y1: toY(-s * far, h),
@@ -2809,7 +3844,11 @@ function paint() {
     ctx.strokeStyle = css("--grid");
     ctx.lineWidth = 1;
     ctx.beginPath();
-    
+    /*
+      The step comes from the settings rather than a hardwired one. Too small a
+      step would flood the canvas solid and hang the loop, so there is a floor:
+      lines no closer than every 4 pixels.
+    */
     const stepOf = (want, span, px) => {
       const s = Math.abs(want) > 1e-9 ? Math.abs(want) : 1;
       return Math.max(s, span * 2 / Math.max(1, px / 4));
@@ -2849,15 +3888,25 @@ function paint() {
     ctx.textAlign = "left";
   }
 
-  
+  // The curves: every piece on its own, a break cuts the line rather than dragging it across the screen.
+  /*
+    Antialiasing: the canvas always draws lines with it, and there is nothing in
+    canvas to turn it off with. What can be done is to put the points exactly on
+    the pixel grid - then the line comes out sharp, with no blurred edges. That
+    is the visible difference, the same as between GDI+ and a plain polyline in
+    the classic window.
+  */
   const snap = v => opt.smooth ? v : Math.round(v) + .5;
   data.seg.forEach(c => {
     if (curves[c.i] && !curves[c.i].on) return;
-
-    ctx.strokeStyle = opt.multicolor ? (c.color || tone(c.i)) : css(opt.penColor);
-    ctx.lineWidth = opt.penWidth + .8;
+    // Without "a colour per formula" every curve goes in the chosen colour of the pen.
+    const own = curves[c.i];
+    ctx.strokeStyle = curveInk(own, c.i);
+    ctx.lineWidth = curveWide(own);
     ctx.lineJoin = opt.smooth ? "round" : "miter";
-    ctx.lineCap = opt.smooth ? "round" : "butt";
+    // A dashed line with round caps turns into a string of blots.
+    ctx.lineCap = (own && own.dash) ? "butt" : (opt.smooth ? "round" : "butt");
+    ctx.setLineDash(curveDash(own, ctx.lineWidth));
     (c.seg || []).forEach(part => {
       ctx.beginPath();
       for (let k = 0; k < part.length; k += 2) {
@@ -2867,20 +3916,24 @@ function paint() {
       ctx.stroke();
     });
   });
+  // The dash is cleared at once: there is one canvas, and a dash left behind would go to everything
+
+  ctx.setLineDash([]);
 
   /*
-    Data series are drawn as POINTS, not as a line, and that is not decoration.
+    A series of data is drawn AS POINTS, not as a line, and that is not
+    decoration.
 
     A line between measurements lies: it draws values where nothing was
-    measured, and a person reads it as the behaviour of the quantity. Points say
-    exactly what there is - here are the measurements, and what lies between
-    them is unknown. It is for the sake of that difference that a series did not
-    become a curve: what becomes a curve is the fitted formula, and that one has
-    the right to run as a solid line.
+    measured, and a person reads it as the behaviour of the quantity. Points
+    say exactly what there is - here are the measurements, and what lies
+    between them is unknown. For the sake of that difference a series did not
+    become a curve: the fitted formula becomes the curve, and that one has
+    every right to run as a solid line.
 
     They are drawn AFTER the curves: a fitted curve passes between the points,
-    and the points have to be visible on top of it, or there is nothing to judge
-    the quality of the fit by.
+    and the points have to be visible on top of it, or there is nothing to
+    judge the quality of the fit by.
   */
   series.forEach((s, i) => {
     if (!s.on) return;
@@ -2888,7 +3941,6 @@ function paint() {
     const r = Math.max(1.5, opt.penWidth + 1.2);
     s.points.forEach(p => {
       const px = toX(p.x, w), py = toY(p.y, h);
-      // Beyond the edge of the canvas nothing is drawn at all: on large series
       // that is the bulk of the work.
       if (px < -r || px > w + r || py < -r || py > h + r) return;
       ctx.beginPath();
@@ -2897,7 +3949,15 @@ function paint() {
     });
   });
 
-  
+  // The caption of the curves right on the canvas: the name of the formula at the right end, if it is on.
+  // The curves spread apart in Y near the edge, so the captions usually do not run into each other.
+  /*
+    The caption of the curves is a legend pressed into a corner of the canvas.
+    The corner, the margin from the edges and the transparency of the plate are
+    set in the settings; the order of the corners is the same as TLayoutType in
+    the component: bottom left, bottom right, top left, top right. The captions
+    used to stand at the ends of the curves, and all three settings did nothing.
+  */
   if (opt.sign) {
     ctx.font = '12px "Cascadia Mono", Consolas, ui-monospace, monospace';
     ctx.textBaseline = "middle";
@@ -2909,9 +3969,21 @@ function paint() {
     const margin = Math.max(0, Number(opt.signMargin) || 0);
     const layout = Math.max(0, Math.min(3, opt.signLayout | 0));
     const atTop = layout >= 2, atRight = layout === 1 || layout === 3;
-
+    // 0 means no plate at all, 255 a solid one. The value arrives from the field as 0..255.
     const alpha = Math.max(0, Math.min(255, Number(opt.signBlend))) / 255;
-    
+    /*
+      The zoom buttons stand in the bottom left corner, and the legend crawled
+      over them: the caption read through the buttons and the buttons through
+      the caption. They are stepped around by the real size of the element
+      rather than by a number written in: the strip of buttons changes height
+      with the theme and with the interface scale.
+
+      The width comes from a cache rather than being measured here. Measuring
+      geometry inside the drawing forces the browser to recompute the layout,
+      and drawing happens on every movement of the mouse while dragging - in
+      the Notepad++ panel that showed as jerks. The buttons change size only
+      together with the canvas, and the value is updated there, in size().
+    */
     const dodge = (!atRight && !atTop) ? zoomDodge : 0;
     rows.forEach((r, k) => {
       const bw = ctx.measureText(r.text).width + pad * 2;
@@ -2919,13 +3991,27 @@ function paint() {
       const by = atTop ? margin + k * (line + gap)
                        : h - margin - (rows.length - k) * (line + gap) + gap;
       if (alpha <= 0) return;
-      
+      /*
+        The transparency covers the whole caption - the plate, the border and
+        the text. It used to colour the plate alone, and the plate is the
+        colour of the surface, that is the same white as #stage under the
+        canvas: white over white at any alpha gives the same white. The
+        measurement showed exactly that - between 100 and 235 only 1311 pixels
+        out of 497 thousand changed, and nearly all of them by less than 33
+        levels per channel. The field looked dead, and rightly so. In the
+        component DrawBitmap blends the whole picture of the caption with the
+        background at once - it is the same here.
+      */
       ctx.globalAlpha = alpha;
       ctx.fillStyle = css("--surface");
       ctx.beginPath();
       ctx.roundRect(bx, by, bw, line, 6);
       ctx.fill();
-      
+      /*
+        A thin border along the edge of the plate. Without it, on a light theme
+        a white plate on a nearly white background cannot be made out, and it is
+        impossible to see whether it covers what lies under it.
+      */
       ctx.strokeStyle = css("--line");
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -2940,7 +4026,13 @@ function paint() {
     ctx.fillStyle = css("--ink-dim");
     const polar = el("cs").querySelector('[aria-pressed="true"]').dataset.cs === "polar";
     const cx = toX(0, w), cy = toY(0, h);
-    
+    /*
+      The mark of an extreme is a triangle whose apex looks along angle (screen
+      radians). In cartesian mode a maximum points up and a minimum down. In
+      polar mode an extreme is computed by the radius, so the arrow runs along
+      the ray from the centre through the point: outwards at a maximum (the far
+      point) and towards the centre at a minimum (the near one).
+    */
     const arrow = (px, py, angle) => {
       const c = Math.cos(angle), s = Math.sin(angle);
       const nx = -s * 4.5, ny = c * 4.5;
@@ -2958,8 +4050,38 @@ function paint() {
       else angle = outward ? -Math.PI / 2 : Math.PI / 2;
       arrow(px, py, angle);
     };
-    data.extremes.max.forEach(p => mark(p, true));
-    data.extremes.min.forEach(p => mark(p, false));
+    /*
+      THINNED WHEN DRAWN, not from memory of an earlier zoom.
+
+      Marks are kept in graph coordinates and stay where they belong when the
+      view changes - that part is right. They are kept on purpose, so that they
+      do not blink while the engine computes (see lastShown). But they were
+      thinned for the PREVIOUS zoom: zoom out and marks that stood fourteen
+      pixels apart end up in one. The arrows overlap and fuse into a solid
+      block - a square instead of an arrow on screen, and the curve for the new
+      view is still being computed, so the block stands alone, without the
+      function. Reported 21.08.2026; it cannot be reproduced on demand, because
+      the state lives only until the engine answers.
+
+      Clearing the marks is not an option - the blinking would come back. So the
+      same rule, in the same pixels, is applied here: the promise "no closer
+      than N pixels" starts holding at any zoom.
+
+      The representative is the first in order, as in the engine: then marks
+      only appear and disappear as the zoom changes, never move about.
+    */
+    const thinByPixels = (list, outward) => {
+      const gap = Math.max(0, +opt.markSpacing || 0);
+      const kept = [];
+      list.forEach(p => {
+        const px = toX(p[0], w), py = toY(p[1], h);
+        if (gap > 0 && kept.some(q => Math.hypot(q[0] - px, q[1] - py) < gap)) return;
+        kept.push([px, py]);
+        mark(p, outward);
+      });
+    };
+    thinByPixels(data.extremes.max, true);
+    thinByPixels(data.extremes.min, false);
   }
 
   if (opt.cross) {
@@ -2991,7 +4113,7 @@ function paint() {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
-
+    // The points on the curves came from the engine, exact ones, in polar and in cartesian alike.
     data.trace.points.forEach(p => {
       const px = toX(p.x, w), py = toY(p.y, h);
       ctx.fillStyle = curves[p.i] ? tone(p.i) : css("--accent");
@@ -3006,16 +4128,37 @@ function paint() {
 let traceAt = 0;
 let traceWait = null;
 
+/*
+  Asking for a trace: the engine works no more often than once every thirtieth
+  of a second, but the LAST position of the cursor has to be computed always.
+
+  The previous version capped the rate with no trailing call: movements that
+  landed in the last 33 ms were dropped silently, and the place where the mouse
+  came to rest was NEVER asked about. The dashed line and the points froze
+  where the cursor had been a moment earlier, and stayed there for good.
+  Measured on the published page on 13.08.2026: the cursor at 3.751 degrees,
+  the trace at 2.567, and a second and a half of stillness did not close the
+  gap; one more movement to the SAME point pulled the trace up to 3.751. The
+  position was not computed wrongly - it was not computed at all.
+
+  The self test kept quiet for two reasons at once: it compared the point with
+  the dashed line (both out of one answer, always in agreement with each other,
+  even when the answer is stale), and its pointing helper sent the movement
+  AGAIN until an answer arrived - that is, it worked around this very defect
+  instead of showing it.
+*/
 function askTrace() {
   if (!cursor) return;
   const left = 33 - (Date.now() - traceAt);
   if (left > 0) {
+
     if (!traceWait) traceWait = setTimeout(() => { traceWait = null; askTrace(); }, left);
     return;
   }
   if (traceWait) { clearTimeout(traceWait); traceWait = null; }
   traceAt = Date.now();
   const gx = fromX(cursor.x, canvas.clientWidth), gy = fromY(cursor.y, canvas.clientHeight);
+  // In polar mode the trace parameter is the angle from the centre, in cartesian the X under the cursor.
   const isPolar = el("cs").querySelector('[aria-pressed="true"]').dataset.cs === "polar";
   let param = gx;
   if (isPolar) {
@@ -3025,8 +4168,13 @@ function askTrace() {
   send({ cmd: "trace", param });
 }
 
+// A recount of the edges after a pan or a zoom, but not on every pixel.
 let rebuildTimer = 0;
-
+/*
+  The status line. The zoom is counted from the original view: the engine keeps
+  no absolute magnification, it has only steps of zooming, so the honest value
+  is how many times narrower the present view is than the initial one.
+*/
 const homeView = { w: view.w, h: view.h };
 
 function fmt(v) {
@@ -3042,11 +4190,23 @@ function statusView() {
   el("statView").textContent = fmt(view.cx) + "; " + fmt(view.cy);
 }
 
+// While the countdown to a recount or the computation itself is going on, that is shown rather than the old number.
 function busyHint(on) {
   document.querySelector(".statusbar").classList.toggle("busy", !!on);
   if (on) el("status").textContent = "computing...";
 }
 
+/*
+  A deferred recount, like the timer in the classic window: every new movement
+  pushes the deadline back, and the computation starts only once the hand has
+  stopped. Without it a heavy formula is recomputed on every pixel of the
+  slider and the program stalls.
+
+  The delay is not fixed but taken from the last measurement: if the previous
+  computation took 400 ms, waiting 90 is pointless - it will not finish
+  anyway. About half the previous time is taken, but never less than 120 ms and
+  never more than 600.
+*/
 let lastBuildMs = 0;
 
 function recalcDelay(min) {
@@ -3060,6 +4220,31 @@ function requestRebuild(min) {
   rebuildTimer = setTimeout(() => { syncView(); build(); }, recalcDelay(min));
 }
 
+/*
+  The "Width", "Height" and "Centre" fields show view itself, and after the
+  wheel, the zoom buttons or a drag they stay on the old numbers. Only these
+  four are refreshed: a full syncControls walks every button, switch, field and
+  colour swatch, and calling it from here is wasted work. The call comes from
+  the deferred rebuild rather than from every movement of the mouse.
+*/
+/*
+  The "Width" and "Height" fields show the FULL size of the visible area, the
+  way the classic window of the plugin does. That window is the source of
+  truth:
+
+      eMaxX.Text := FloatToStr(FGraph.MaxX * 2);    showing - doubles
+      FGraph.MaxX := Value / 2;                     entering - halves
+
+  In the component MaxX is a HALF-width: the visible range is [-MaxX, +MaxX]
+  around the centre, so edge to edge holds 2 * MaxX. The page keeps that same
+  half-width in view.w and is obliged to double it when showing, or the field
+  is called "Width" and means half of one.
+
+  It did not double it: an entered 15 gave 30 units on the screen, and the pair
+  4.83 and 20 was drawn as 9.66 and 40 - the cells came out wide and low even
+  though the "height" number is the larger one. From outside it looked as if
+  the sizes were being applied the wrong way round.
+*/
 function syncView() {
   const box = { maxX: view.w * 2, maxY: view.h * 2, centerX: view.cx, centerY: view.cy };
   document.querySelectorAll(".num[data-opt]").forEach(n => {
@@ -3067,6 +4252,13 @@ function syncView() {
       n.value = box[n.dataset.opt];
   });}
 
+/*
+  Moving the view with the mouse. A cell is square, so a fraction of the window
+  in X and in Y turns into units of the plot by one multiplier. The curves are
+  already computed in the coordinates of the plot, so while dragging they are
+  simply redrawn with an offset; the engine fills the edges in once the drag
+  comes to rest.
+*/
 let drag = null;
 el("stage").addEventListener("mousedown", e => {
   if (e.button !== 0 || el("report").classList.contains("on")) return;
@@ -3108,6 +4300,11 @@ el("stage").addEventListener("mouseleave", () => {
   paint();
 });
 
+/*
+  Zooming with the wheel anchored to the cursor: the point under the cursor
+  stays where it is. It is computed before and after the width of the view
+  changes, and the centre is moved by the difference.
+*/
 el("stage").addEventListener("wheel", e => {
   e.preventDefault();
   const r = canvas.getBoundingClientRect();
@@ -3134,6 +4331,13 @@ el("stage").addEventListener("wheel", e => {
   requestRebuild();
 }, { passive: false });
 
+/*
+  The buttons by the canvas: zoom in, zoom out, back to the origin. Zooming goes
+  from the centre of the view by the step from the settings (the same
+  zoomIn/zoomOut that travel to the engine). Going back to the origin moves the
+  centre to (0, 0) and leaves the zoom alone. mousedown is swallowed so that a
+  click on a button does not start dragging the canvas.
+*/
 const zoomBox = document.querySelector(".zoom");
 zoomBox.addEventListener("mousedown", e => e.stopPropagation());
 const zoomBtns = zoomBox.querySelectorAll(".icon-btn");
@@ -3152,12 +4356,38 @@ el("tools").addEventListener("click", e => {
   paint();
 });
 
+/*
+  The settings of the polar angle are shown ONLY in polar coordinates.
+
+  In cartesian ones they mean nothing, and a person going through the settings
+  spent attention on them for nothing. In polar ones it is the other way round:
+  the remark from bms-2015 was that a spiral is drawn as one turn and it is not
+  clear where that is changed.
+*/
+function syncPolarRows() {
+  const polar = currentCS() === "polar";
+  document.querySelectorAll(".polar-only").forEach(r => { r.hidden = !polar; });
+  const turns = (opt.polarAngle || 360) / 360;
+  document.querySelectorAll(".turnpick button").forEach(b => {
+    b.setAttribute("aria-pressed", String(Number(b.dataset.turns) === turns));
+  });
+}
+
+document.querySelectorAll(".turnpick button").forEach(b => {
+  b.onclick = () => {
+    opt.polarAngle = Number(b.dataset.turns) * 360;
+    syncControls();
+    sendOptions();
+  };
+});
+
 el("cs").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
   const from = currentCS();
   [...el("cs").children].forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   if (b.dataset.cs !== from) switchSheet(from, b.dataset.cs);
+  syncControls();
   build();
 });
 
@@ -3167,9 +4397,10 @@ document.querySelectorAll(".switch").forEach(s => {
     s.setAttribute("aria-pressed", String(active));
     if (s.dataset.opt) {
       opt[s.dataset.opt] = active;
-
+      // The ratio was switched on - the cell has to be put right at once rather than waiting for a rebuild.
       if (s.dataset.opt === "keepRatio") syncLock();
       if (s.dataset.opt === "keepRatio" && active) { size(); return; }
+      // Some of the switches change the look only (antialiasing, one colour, the caption) -
 
       paint();
       sendOptions();
@@ -3181,16 +4412,33 @@ document.querySelectorAll(".num[data-opt]").forEach(n => {
   n.onchange = () => {
     const value = parseFloat(n.value.replace(",", "."));
     if (isNaN(value)) return;
-
-    
+    // The width and the height live in view rather than in opt: options() sends exactly those.
+    /*
+      A cell has to stay square, and size() puts that right at every redraw of
+      the canvas. While the "Width" and "Height" fields wrote into view.w and
+      view.h separately, any disagreement between them drew a circle as an
+      ellipse, and the very first resize of the window brought the right
+      picture back - at which point the "Height" field began to lie: it showed
+      what had been entered while something else was drawn. So an entered value
+      sets one side, and the other comes from the proportions of the canvas.
+    */
     if (n.dataset.opt === "maxX" || n.dataset.opt === "maxY") {
-      
+      /*
+        With the ratio on, one side is free and the other is computed: two
+        independent values and a square cell cannot both hold unless the canvas
+        itself is square. Whichever was entered last is the leading one. Turned
+        off, each side stands on its own, as in the component.
+      */
+      /*
+        A full value is entered while a half is kept inside - so it is halved,
+        the way the classic window does it: FGraph.MaxX := Value / 2.
+      */
       const half = value / 2;
       if (!opt.keepRatio) {
         if (n.dataset.opt === "maxX") view.w = half; else view.h = half;
       }
       else {
-
+        // The same values as in size() and in the drawing: otherwise the cell goes out of square.
         const ratio = canvas.clientWidth > 0 ? canvas.clientHeight / canvas.clientWidth : 1;
         if (n.dataset.opt === "maxX") { view.w = half; view.h = half * ratio; }
         else { view.h = half; view.w = ratio > 0 ? half / ratio : half; }
@@ -3209,7 +4457,8 @@ document.querySelectorAll(".swatches").forEach(box => {
   box.onclick = e => {
     const b = e.target.closest("button");
     if (!b) return;
-
+    // The colour has to be remembered as well as highlighted: the curves are drawn with it when
+    // "a colour per formula" is off. The choice used to be saved nowhere.
     opt.penColor = palette[[...box.children].indexOf(b)] || palette[0];
     /*
       And the same click takes off "a colour of its own for every formula".
@@ -3230,24 +4479,35 @@ document.querySelectorAll(".swatches").forEach(box => {
       not closed.
     */
     opt.multicolor = false;
-    // The swatch is highlighted by syncControls from penColor, not by us from
-    // the button pressed: otherwise on an unknown colour one thing is
-    // highlighted and another one is in force.
+    // The highlight of the swatch is set by syncControls from penColor rather than by us from the
+    // pressed button: otherwise with an unknown colour one thing is highlighted and another is in force.
     syncControls();
     paint();
     sendOptions();
   };
 });
 
+/*
+  The quality slider: the number changes at once, the computation only once the
+  slider has come to rest. Every movement pushes the deadline back, so while
+  dragging no recount happens at all. The density of points is the most
+  expensive thing in a computation, and without this delay a heavy formula was
+  recomputed on every pixel of travel.
+*/
 let qualityTimer = 0;
 
 el("quality").oninput = e => {
   el("qualityValue").textContent = e.target.value;
   opt.quality = +e.target.value;
-  
+  /*
+    Quality set by hand means something only with the automatic choice turned
+    off: otherwise the engine decides the density itself and the slider changes
+    nothing. Move the slider and you take the quality into your own hands - the
+    automatic mode goes out, in the settings too.
+  */
   opt.autoquality = false;
   syncControls();
-  el("quality").value = e.target.value;
+  el("quality").value = e.target.value;   // syncControls must not pull the slider back
   busyHint(true);
   clearTimeout(qualityTimer);
   qualityTimer = setTimeout(sendQuality, recalcDelay(200));
@@ -3323,7 +4583,7 @@ function markupTable(text, got) {
     });
     out.push(marked.join(sep === " " ? "" : '<i class="tk-sep">' + esc(sep) + "</i>"));
   }
-  // The trailing newline is needed, or the last line of the mirror does not
+
   // scroll with the field and its highlighting lags a line behind.
   return out.join("\n") + "\n";
 }
@@ -3344,13 +4604,26 @@ function plural(n, one, few, many) {
   return many;
 }
 
+/*
+  The paste window reads AS MANY tables as a selection in the editor does.
+
+  parseTable used to stand here - one table for the whole text - while a
+  selection went through parseTables and gave a separate series for each. One
+  and the same text turned into two series or into one depending on the road it
+  travelled: parseTable throws blank lines away, and two sets of points merged
+  silently into one.
+
+  Found on 20.08.2026 while correcting the wording on the site: the wording
+  promised a split on a blank line, and the paste window did not do it.
+*/
 function refreshTable() {
   const text = dataInput.value;
-  const got = parseTable(text);
+  const all = parseTables(text);
+  const got = all[0] || null;
   dataMirror.innerHTML = markupTable(text, got);
   dataMirror.scrollTop = dataInput.scrollTop;
   dataMirror.scrollLeft = dataInput.scrollLeft;
-  el("dataOk").disabled = !got;
+  el("dataOk").disabled = !all.length;
   if (!text.trim()) {
     dataNote.className = "sheet-note";
     dataNote.textContent = "";
@@ -3362,12 +4635,17 @@ function refreshTable() {
       + "and two numbers in each.";
     return;
   }
-  const bits = ["<b>" + got.points.length + "</b> " + plural(got.points.length, "point", "points", "points"),
+  const total = all.reduce((sum, one) => sum + one.points.length, 0);
+  const bits = ["<b>" + total + "</b> " + plural(total, "point", "points", "points"),
                 "separator - " + (SepName[got.sep] || got.sep)];
+  if (all.length > 1)
+    bits.unshift("<b>" + all.length + "</b> "
+               + plural(all.length, "table", "tables", "tables"));
   if (got.header) bits.push("header: " + got.header.slice(0, 2).join(", "));
-  if (got.skipped)
-    bits.push("<b>" + got.skipped + "</b> "
-            + plural(got.skipped, "line", "lines", "lines") + " skipped");
+  const skipped = all.reduce((sum, one) => sum + one.skipped, 0);
+  if (skipped)
+    bits.push("<b>" + skipped + "</b> "
+            + plural(skipped, "line", "lines", "lines") + " skipped");
   dataNote.className = "sheet-note";
   dataNote.innerHTML = bits.join(" · ");
 }
@@ -3388,25 +4666,148 @@ function closeTable() {
 }
 
 dataInput.addEventListener("input", refreshTable);
-// The two layers scroll together: let them part and the highlighting drifts off
 // the text.
 dataInput.addEventListener("scroll", () => {
   dataMirror.scrollTop = dataInput.scrollTop;
   dataMirror.scrollLeft = dataInput.scrollLeft;
 });
 dataInput.addEventListener("keydown", e => {
-  // Ctrl+Enter builds without taking the hands off the keyboard. Enter inside
-  // the field is a line break, and a multi-line input cannot have that taken
+  // Ctrl+Enter draws without taking the hands off the keyboard. Enter inside the field is
   // away.
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); takeTable(); }
 });
 
 function takeTable() {
-  const got = parseTable(dataInput.value);
-  if (!got) return;
-  addSeries(got);
+  const all = parseTables(dataInput.value);
+  if (!all.length) return;
+  all.forEach(one => addSeries(one));
   closeTable();
 }
+
+/*
+  THE REFERENCE OF SIGNS AND FUNCTIONS.
+
+  The content lies in syntax.xml next to the library of the plugin and is NOT
+  built in here. Two roads to it, because the situation differs:
+
+    in the plugin the page is opened from a file, and the browser will not let
+    it fetch a neighbouring file - the host brings it as the answer to the
+    reference command;
+
+    on the site the page lies on a server beside the reference, and takes it
+    itself with an ordinary request.
+
+  It is read once per session: the reference changes with a release, no more
+  often than that.
+*/
+let refDoc = null;
+let refBusy = false;
+
+function refShow(text) {
+  const list = el("helpList");
+  let doc = null;
+  try {
+    doc = new DOMParser().parseFromString(text, "application/xml");
+  } catch (e) { doc = null; }
+  if (!doc || doc.querySelector("parsererror") || !doc.querySelector("reference")) {
+    list.innerHTML = "<p class='empty'>The reference cannot be read.</p>";
+    el("helpNote").textContent = "";
+    return;
+  }
+  refDoc = doc;
+  refDraw("");
+}
+
+function refDraw(filter) {
+  const list = el("helpList");
+  const need = filter.trim().toLowerCase();
+  const parts = [];
+  let shown = 0;
+  refDoc.querySelectorAll("section").forEach(sec => {
+    const rows = [];
+    sec.querySelectorAll("item").forEach(item => {
+      const name = item.getAttribute("name") || "";
+      const also = item.getAttribute("also") || "";
+      const params = item.getAttribute("params") || "";
+      const means = item.getAttribute("means") || "";
+      const example = item.getAttribute("example") || "";
+      const says = (item.textContent || "").trim();
+      const hay = (name + " " + also + " " + means + " " + example + " " + says).toLowerCase();
+      if (need && hay.indexOf(need) < 0) return;
+      shown++;
+      const head = esc(name) + (also ? " <em>" + esc(also) + "</em>" : "") +
+                   (params ? " <em>(" + esc(params) + ")</em>" : "");
+      let tail = "";
+      if (means) tail += "<b>" + esc(means) + "</b>";
+      if (says) tail += (tail ? " - " : "") + esc(says);
+      if (example) tail += " <i>" + esc(example) + "</i>";
+      if (!tail) tail = "<i>no description yet</i>";
+      const trap = /\^/.test(also) || /\^/.test(name);
+      rows.push("<div class='ref-item" + (trap ? " trap" : "") + "'>" +
+                "<span class='ref-name'>" + head + "</span>" +
+                "<span class='ref-says'>" + tail + "</span></div>");
+    });
+    if (!rows.length) return;
+    parts.push("<p class='ref-sec'>" + esc(sec.getAttribute("title") || "") + "</p>");
+    parts.push(rows.join(""));
+  });
+  list.innerHTML = parts.length ? parts.join("") : "<p class='empty'>Nothing found.</p>";
+  el("helpNote").textContent = need ? ("shown" + shown) : ("all of them," + shown);
+}
+
+function refLoad() {
+  if (refDoc || refBusy) return;
+  refBusy = true;
+  el("helpList").innerHTML = "<p class='empty'>Reading the reference...</p>";
+  if (host) {
+    send({ cmd: "reference" });
+    return;
+  }
+  fetch("syntax.xml")
+    .then(r => r.ok ? r.text() : Promise.reject(r.status))
+    .then(text => { refBusy = false; refShow(text); })
+    .catch(() => {
+      refBusy = false;
+      el("helpList").innerHTML = "<p class='empty'>The reference was not found beside the page.</p>";
+    });
+}
+
+function openHelp() {
+  el("helpBack").hidden = false;
+  el("helpSheet").hidden = false;
+  refLoad();
+  el("helpFind").focus();
+}
+
+function closeHelp() {
+  el("helpSheet").hidden = true;
+  el("helpBack").hidden = true;
+  el("helpBtn").focus();
+}
+
+function setLive(on, quiet) {
+  liveCatch = !!on;
+  const btn = el("liveBtn");
+  btn.setAttribute("aria-pressed", String(liveCatch));
+  btn.title = liveCatch
+    ? "Live pick-up from the editor is on"
+    : "Live pick-up is off: Alt+Shift+G only";
+  /*
+    Turning it off removes what the live roads have already shown: otherwise a
+    curve the person has just forbidden to pick up would stay on the canvas with
+    nothing to remove it with.
+  */
+  if (!liveCatch) { dropPreview(); drawPanel(); build(); }
+  else if (!quiet) build();
+}
+
+el("liveBtn").onclick = () => setLive(!liveCatch);
+
+el("helpBtn").onclick = openHelp;
+el("helpClose").onclick = closeHelp;
+el("helpDone").onclick = closeHelp;
+el("helpBack").onclick = closeHelp;
+el("helpFind").addEventListener("input", e => { if (refDoc) refDraw(e.target.value); });
 
 el("dataBtn").onclick = () => openTable();
 el("dataClose").onclick = closeTable;
@@ -3416,6 +4817,9 @@ el("dataOk").onclick = takeTable;
 el("dataDemo").onclick = () => { dataInput.value = DemoTable; refreshTable(); dataInput.focus(); };
 
 document.addEventListener("keydown", e => {
+
+  if (e.key === "Escape" && penPop) { e.preventDefault(); closePen(); return; }
+  if (e.key === "Escape" && !el("helpSheet").hidden) { e.preventDefault(); closeHelp(); return; }
   if (e.key === "Escape" && !dataSheet.hidden) { e.preventDefault(); closeTable(); }
 });
 
@@ -3428,7 +4832,7 @@ document.addEventListener("keydown", e => {
   seen before it turns into points.
 */
 document.addEventListener("paste", e => {
-  if (el("dataBtn").hidden) return;          // the plugin has no such road
+  if (el("dataBtn").hidden) return;          // there is no such road in the plugin
   const inField = e.target && (e.target.tagName === "INPUT"
                             || e.target.tagName === "TEXTAREA");
   if (inField) return;
@@ -3437,9 +4841,16 @@ document.addEventListener("paste", e => {
   e.preventDefault();
   openTable(text);
 });
+
 el("gearBtn").onclick = () => el("drawer").classList.toggle("open");
 el("closeDrawer").onclick = () => el("drawer").classList.remove("open");
-
+/*
+  "Draw" draws what is in the input field. The field and the list of formulas
+  are different things: the current formula is typed in the field, the drawn
+  ones lie in the list. If a formula was deleted from the list while it stayed
+  in the field, the button has to bring it back and draw it rather than send an
+  empty list. A duplicate by text is not added.
+*/
 function commitField() {
   const t = el("formula").value.trim();
   if (t && !curves.some(c => c.text === t)) {
@@ -3478,8 +4889,7 @@ const UndoDepth = 20;
 
 function remember(what) {
   undoStack.push({ what: what, snap: state() });
-  // The depth is bounded: a snapshot carries every formula and setting, and the
-  // panel lives inside an editor for weeks. Twenty steps is plenty, and the
+  // The depth is limited: a snapshot carries every formula and setting, and the panel lives in
   // memory does not grow.
   if (undoStack.length > UndoDepth) undoStack.shift();
   syncUndo();
@@ -3489,8 +4899,8 @@ function syncUndo() {
   const b = el("undoBtn");
   const last = undoStack[undoStack.length - 1];
   b.disabled = !last;
-  // The tooltip names WHAT exactly will be undone: "undo" with no object makes
-  // a person press at random and look at what came out.
+  // The hint names WHAT exactly will be undone: an "undo" with no object makes a person
+
   b.title = last ? "Undo: " + last.what : "Nothing to undo";
 }
 
@@ -3503,6 +4913,7 @@ function undo() {
 }
 
 el("undoBtn").onclick = undo;
+
 /*
   The state of the graph to the clipboard and back - the same actions that were
   on the panel.
@@ -3525,9 +4936,8 @@ el("undoBtn").onclick = undo;
 el("clearBtn").onclick = () => {
   if (!curves.length && !series.length) return;
   remember("clearing of the panel");
-  // The mark of what has been shown comes off along with it: otherwise the same
-  // selection, touched in the editor after the clearing, would count as already
-  // shown and would not come back.
+  // The mark of having been shown is cleared along with it: otherwise the same selection,
+  // touched in the editor after a clear, would count as already shown and would not come back.
   dropPreview();
   curves.length = 0;
   series.length = 0;
@@ -3539,13 +4949,40 @@ el("clearBtn").onclick = () => {
   data.trace = null;
   drawPanel();
   paintTraceValues();
-  // The canvas is redrawn AT ONCE, not on the answer of the engine. The answer
-  // comes tens of milliseconds later, and all that while a person sees on the
-  // canvas what he has already taken away. And if the engine has nothing to
-  // answer to an empty list, it does not come at all.
+  // The canvas is redrawn AT ONCE rather than on the answer of the engine. The answer comes
+  // tens of milliseconds later, and all that time a person sees on the canvas what they have
+  // already removed. And if the engine has nothing to answer an empty list with, it does not come at all.
   paint();
   build();
 };
+/*
+  The button hands over a ready link rather than a bare snapshot: whoever
+  receives it needs neither the plugin nor an explanation - they open it and
+  see. The snapshot inside is the same, so pasting between two panels works as
+  before.
+*/
+/*
+  COPYING TEXT. Two roads, because the situation differs: in the plugin the
+  clipboard belongs to the host (the page there is opened from a file and has
+  no access of its own), on the site the page takes the clipboard itself.
+
+  Asked for by bms-2015 in issues #4 and #5: "a Copy button is needed both for
+  a fitted formula and for the ones typed by hand - to paste a formula from the
+  panel into the text". A fitted formula goes into the same list as a typed
+  one, so there is a single button and it stands in the formula row.
+*/
+function copyText(text) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  if (host) { send({ cmd: "copy", text: value }); return true; }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (e) {  }
+  return false;
+}
 
 el("copyBtn").onclick = () => send({ cmd: "copy", text: shareLink() });
 el("pasteBtn").onclick = () => send({ cmd: "paste" });
@@ -3571,6 +5008,7 @@ function printNow() {
   printPending = false;
   window.print();
 }
+
 el("printBtn").onclick = () => {
   printPending = true;
   send({ cmd: "report" });
@@ -3578,7 +5016,7 @@ el("printBtn").onclick = () => {
 };
 
 el("fontBtn").onclick = () => send({ cmd: "signfont" });
-
+// The position of the caption: the order of the items matches the enumeration in the engine.
 el("signLayout").onchange = () => {
   opt.signLayout = el("signLayout").selectedIndex;
   paint();
@@ -3589,7 +5027,7 @@ el("reportBtn").onclick = () => {
   const r = el("report");
   r.classList.toggle("on");
   el("reportBtn").setAttribute("aria-pressed", String(r.classList.contains("on")));
-
+  // The engine computes the facts; on the demo (with no plugin) the stub of the page is left.
   if (r.classList.contains("on")) send({ cmd: "report" });
 };
 /*
@@ -3648,8 +5086,20 @@ addEventListener("afterprint", () => {
   paint();
 });
 
+/*
+  The history of formulas. In the classic window it lived as a list of its own
+  per coordinate system - it is the same here. The storage of the browser can be
+  out of reach (the page opened from disk), so writing is wrapped: then the
+  history lives until the page is closed.
+*/
 const histAll = { rect: [], polar: [] };
 const HistLimit = 20;
+/*
+  The self test runs this page in an iframe and fills the history with formulas
+  of its own. While the key was shared, its traces went to a live visitor - as
+  did the state of the view, until that was separated out in wasmhost.js. The
+  plugin never knows the selftest parameter, so its key is the old one.
+*/
 const HistKey = new URLSearchParams(location.search).has("selftest")
   ? "graphbuilder.selftest.history" : "graphbuilder.history";
 
@@ -3713,17 +5163,17 @@ el("histBtn").onclick = e => {
   if (on) histDraw();
   histShow(on);
 };
-
+// A click outside the list and Esc close it - otherwise it would hang over the plot.
 document.addEventListener("click", () => histShow(false));
 document.addEventListener("keydown", e => { if (e.key === "Escape") histShow(false); });
 
 /*
-  Ctrl+Z undoes the last destructive action - the same place the button does it.
+  Ctrl+Z undoes the last destructive action - the same one the button undoes.
 
-  In an input field, and in any other editable place, the combination is NOT
-  intercepted: there it belongs to editing text, and taking it away would mean
-  breaking the habitual for the sake of the new. A person typing a formula
-  expects the typing to be undone, not the erased list to come back.
+  In the input field and in any other editable place the combination is NOT
+  intercepted: there it belongs to editing text, and taking it away would break
+  the familiar for the sake of the new. A person typing a formula expects their
+  typing undone, not a deleted list brought back.
 */
 document.addEventListener("keydown", e => {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey) return;
@@ -3750,11 +5200,25 @@ el("formula").addEventListener("keydown", e => {
 });
 
 window.addEventListener("resize", size);
-
+/*
+  The window may stay the same while the room for the canvas does not: the
+  status line wraps, the panel folds. Without an observer the canvas keeps its
+  old size and is stretched by the style - the grid swims with moire. The
+  observer watches the canvas itself.
+*/
 if (window.ResizeObserver) {
   let roTimer = 0;
   new ResizeObserver(() => {
     const r = canvas.parentElement.getBoundingClientRect();
+    /*
+      The size agrees - so a relayout already asked for is cancelled too.
+
+      A bare return used to stand here, and the request stayed in the queue. A
+      jump in height that undid itself ten milliseconds later still led to a
+      relayout and a recount. And raising and lowering the scene by the height
+      of the "working..." strip is something the recount itself can do - hence
+      the endless circle.
+    */
     if (Math.abs(r.width - canvas.width / (window.devicePixelRatio || 1)) < 2 &&
         Math.abs(r.height - canvas.height / (window.devicePixelRatio || 1)) < 2)
     {
@@ -3766,12 +5230,22 @@ if (window.ResizeObserver) {
     roTimer = setTimeout(size, 60);
   }).observe(el("stage"));
 }
+/*
+  The controls are brought to their state BEFORE the first exchange with the
+  host.
 
+  Without that the settings drawer showed the defaults of the markup while the
+  drawing went by opt - and the two disagreed. The list for the position of the
+  caption stood at "bottom left" while opt.signLayout was 1, that is the
+  caption was drawn on the right: the user saw one thing in the settings and
+  another on the canvas, and switching the item looked broken. syncControls was
+  called only from applySnapshot, and that does not always arrive.
+*/
 syncControls();
 send({ cmd: "ready" });
 
 send({ cmd: "bookmark", slot: 0, mode: "status" });
-
+// The demo without the plugin can be opened straight into polar: index.html?cs=polar.
 if (new URLSearchParams(location.search).get("cs") === "polar")
   [...el("cs").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cs === "polar")));
 
@@ -3779,9 +5253,16 @@ const fnPanel = el("panel");
 fnPanel.addEventListener("mousedown", e => e.stopPropagation());
 fnPanel.addEventListener("mousemove", e => e.stopPropagation());
 fnPanel.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
-
+// The cursor moved onto the panel - the trace is hidden: here one inspects and switches rather than traces.
 fnPanel.addEventListener("mouseenter", () => { cursor = null; data.trace = null; paintTraceValues(); paint(); });
 
+/*
+  The report lies over the canvas (position: absolute; inset: 0) and scrolls by
+  itself. Without isolation the wheel over it reached the scene, and the scene
+  calls preventDefault and zooms the plot: the user turns the wheel to read the
+  rest of the report and gets a change of zoom instead of a scroll. The same
+  device as on the panel of functions.
+*/
 const reportPanel = el("report");
 reportPanel.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
 reportPanel.addEventListener("mousedown", e => e.stopPropagation());
@@ -3793,7 +5274,11 @@ drawPanel();
 drawMarks();
 size();
 {
-  
+  /*
+    Arrived by a link - the state is lifted from the tail of the address and
+    drawn at once. Done after size(), so that the view already knows the size of
+    the canvas.
+  */
   const shared = shareState(location.hash);
   if (shared) applySnapshot(Object.assign({ type: "snapshot" }, shared));
 }

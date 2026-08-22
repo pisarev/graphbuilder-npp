@@ -157,6 +157,43 @@ begin
   Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
 end;
 
+function EscapeLong(const Text: string): string;
+begin
+  Result := Escape(Text);
+  Result := StringReplace(Result, #13#10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #9, '\t', [rfReplaceAll]);
+end;
+
+function SyntaxFile: string;
+var
+  Buffer: array[0..MAX_PATH] of Char;
+begin
+  FillChar(Buffer, SizeOf(Buffer), 0);
+  GetModuleFileName(HInstance, Buffer, Length(Buffer));
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(Buffer)) + 'syntax.xml';
+end;
+
+function ReferenceText: string;
+var
+  List: TStringList;
+begin
+  Result := '';
+  if not FileExists(SyntaxFile) then Exit;
+  List := TStringList.Create;
+  try
+    try
+      List.LoadFromFile(SyntaxFile, TEncoding.UTF8);
+      Result := List.Text;
+    except
+      Result := '';
+    end;
+  finally
+    List.Free;
+  end;
+end;
+
 procedure SeedPageDefaults(const Graph: TGraph);
 begin
   if not Assigned(Graph) then Exit;
@@ -894,6 +931,8 @@ begin
     end;
     if Value.Value = 'report' then
       Exit(ReportPage);
+    if Value.Value = 'reference' then
+      Exit('{"type":"reference","text":"' + EscapeLong(ReferenceText) + '"}');
     if Value.Value = 'toeditor' then
     begin
       if Assigned(FOnToEditor) then

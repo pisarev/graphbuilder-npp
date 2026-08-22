@@ -35,6 +35,7 @@ not as proof that the two agree point for point.
 | `src/` | the plugin: the panel, the bridge to the page, the report, the theme, the icons |
 | `bindings/` | our own Notepad++ bindings - written from the published ABI, no third-party code |
 | `web/index.html` | the panel itself. The same file is published as the site demo |
+| `web/syntax.xml` | the reference the panel shows on a button: every sign and function the parser knows |
 | `lazarus/` | the second build of the same plugin, made with Lazarus/FPC |
 
 ## It needs two repositories next to it
@@ -72,7 +73,7 @@ reproduce it without a Delphi licence.
 The Delphi build wants **11 Alexandria or newer**, and that floor is not ours to
 move: it reaches WebView2 through `Winapi.WebView2`, which Embarcadero began
 shipping in the RTL with 11. On 10.2, 10.3 and 10.4 the unit is simply absent.
-Nothing else here stands in the way - before a release all thirteen units are
+Nothing else here stands in the way - before a release all fourteen units are
 compiled one at a time on six installations, and from 11 upwards every one of
 them builds. The two libraries this plugin sits on, the parser and the plotting
 engine, go back further, to 10.2 Tokyo; the plugin does not, and the difference
@@ -284,6 +285,23 @@ Two details cost real time and are worth knowing if you write your own:
   `ALIGN ON`; FPC needs `PACKRECORDS C`. Without it `TToolbarData` shifted, and
   Notepad++ read a neighbouring field as a pointer to a name and died without a
   message the first time the panel was shown.
+
+## The reference is generated, not written
+
+The panel has a button that lists the signs and functions of the parser, each
+with a description and an example. The content is `web/syntax.xml`, and the
+build puts it NEXT TO the library rather than into `ui`: the panel asks the
+host for it, because a page opened from a file is not allowed to fetch its
+neighbour.
+
+The file is generated from the registry of the parser itself. That is the
+point of it: a hand-written list drifts from what the parser accepts, and
+the drift is invisible until somebody writes a formula against the list
+and gets a refusal. A generated one cannot drift.
+
+It is also where the one real trap is spelled out. `^` is exclusive-or in
+this parser, not a power: `x ^ 2` returns a number, just never the one you
+meant. Write `x ** 2` for the square.
 
 ## The page is shared
 

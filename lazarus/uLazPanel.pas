@@ -160,6 +160,10 @@ function Escape(const Text: string): string;
 begin
   Result := StringReplace(Text, '\', '\\', [rfReplaceAll]);
   Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := StringReplace(Result, #13#10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #9, '\t', [rfReplaceAll]);
 end;
 
 function Web(const Value: TColor): string;
@@ -170,14 +174,41 @@ begin
   Result := Format('#%.2x%.2x%.2x', [Byte(RGB), Byte(RGB shr 8), Byte(RGB shr 16)]);
 end;
 
-function UiFile: string;
+function PluginFolder: string;
 var
   Buffer: array[0..MAX_PATH] of WideChar;
 begin
   FillChar(Buffer, SizeOf(Buffer), 0);
   GetModuleFileNameW(HInstance, @Buffer[0], Length(Buffer));
-  Result := IncludeTrailingPathDelimiter(ExtractFilePath(string(PWideChar(@Buffer[0])))) +
-    'ui\index.html';
+  Result := IncludeTrailingPathDelimiter(
+    ExtractFilePath(string(PWideChar(@Buffer[0])))
+  );
+end;
+
+function UiFile: string;
+begin
+  Result := PluginFolder + 'ui\index.html';
+end;
+
+function ReferenceText: string;
+var
+  Path: string;
+  List: TStringList;
+begin
+  Result := '';
+  Path := PluginFolder + 'syntax.xml';
+  if not FileExists(Path) then Exit;
+  List := TStringList.Create;
+  try
+    try
+      List.LoadFromFile(Path, TEncoding.UTF8);
+      Result := List.Text;
+    except
+      Result := '';
+    end;
+  finally
+    List.Free;
+  end;
 end;
 
 procedure TLazPanel.CreateWnd;
@@ -233,9 +264,16 @@ begin
 end;
 
 constructor TLazPanel.Create(NppParent: TNppPlugin; DlgId: Integer);
+var
+  Keys: string;
 begin
   inherited Create(NppParent, DlgId);
   Caption := 'Graph Builder';
+  if Assigned(NppParent) then
+  begin
+    Keys := Trim(NppParent.ShortcutText(DlgId));
+    if Keys <> '' then Caption := Caption + '  (' + Keys + ')';
+  end;
   Width := 900;
   Height := 600;
   OnShow := Shown;
@@ -608,6 +646,11 @@ begin
     Root := TJSONObject(Data);
     Cmd := Root.Get('cmd', '');
     LogStep('command from the page: ' + Cmd);
+    if Cmd = 'reference' then
+    begin
+      LogStep('reference: handing the help page over');
+      Exit('{"type":"reference","text":"' + Escape(ReferenceText) + '"}');
+    end;
     if Cmd = 'size' then
     begin
       W := Root.Get('w', FGraph.Width);

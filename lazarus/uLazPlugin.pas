@@ -14,7 +14,8 @@ interface
 
 uses
   SysUtils, Classes, Windows, ExtCtrls, uWVLoader, NotepadPP.Types, NotepadPP.Scintilla,
-  NotepadPP.Plugin, Parser, ParseTypes, ValueTypes, CrossGraph, uLazTrace, uLazPanel;
+  NotepadPP.Plugin, Parser, ParseTypes, ValueTypes, CrossGraph, uLazTrace, uLazPanel,
+  ToolbarGlyph;
 
 type
   TLazPlugin = class(TNppPlugin)
@@ -30,6 +31,7 @@ type
     procedure ShowSelection(Sender: TObject);
   protected
     function DefaultName: string; override;
+    procedure DoNppnToolbarModification; override;
     procedure DoNppnShutdown; override;
     procedure DoNppnDarkModeChanged; override;
     procedure DoNotify(const Notification: PSciNotification); override;
@@ -259,7 +261,9 @@ begin
     if GlobalWebView2Loader.StartWebView2 then
       LogStep('Edge loader: start requested')
     else
-      LogStep('Edge loader: START FAILED, state ' + IntToStr(Ord(GlobalWebView2Loader.Status)) + ', reason: ' + UTF8Encode(GlobalWebView2Loader.ErrorMessage));
+      LogStep('Edge loader: START FAILED, state ' +
+        IntToStr(Ord(GlobalWebView2Loader.Status)) + ', reason: ' +
+        UTF8Encode(GlobalWebView2Loader.ErrorMessage));
   end;
   if not Assigned(Panel) then
   begin
@@ -270,6 +274,29 @@ begin
   LogStep('panel: showing');
   Panel.Show;
   LogStep('panel: shown');
+end;
+
+procedure TLazPlugin.DoNppnToolbarModification;
+var
+  Glyph: TToolbarGlyph;
+  Icons: TToolbarIcons;
+begin
+  inherited;
+  Glyph := BuildToolbarGlyph(GlyphSide);
+  if Glyph.Painted = 0 then
+  begin
+    LogStep('toolbar: the icon came out empty, there will be no button');
+    Exit;
+  end;
+  FillChar(Icons, SizeOf(Icons), 0);
+  Icons.ToolbarBmp := Glyph.Bmp;
+  Icons.ToolbarIcon := Glyph.Light;
+  Icons.ToolbarIconDarkMode := Glyph.Dark;
+  if AddToolbarIcon(PanelMenuIndex, Icons) then
+    LogStep(Format('toolbar: the request went out, icon %dx%d, %d pixels painted',
+      [GlyphSide, GlyphSide, Glyph.Painted]))
+  else
+    LogStep('toolbar: the request did not go out - the icon is incomplete');
 end;
 
 procedure TLazPlugin.DoNppnDarkModeChanged;

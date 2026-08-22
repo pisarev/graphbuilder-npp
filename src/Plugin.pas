@@ -14,7 +14,7 @@ interface
 
 uses
   Windows, Messages, Classes, SysUtils, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Scintilla,
-  Parser, ParseTypes, Thread, DarkTheme, WebPanel;
+  Parser, ParseTypes, Thread, DarkTheme, WebPanel, ToolbarGlyph;
 
 type
   TSearchThread = class;
@@ -392,8 +392,18 @@ begin
 end;
 
 procedure TPlugin.DoNppnToolbarModification;
+var
+  Glyph: TToolbarGlyph;
+  Icons: TToolbarIcons;
 begin
   inherited;
+  Glyph := BuildToolbarGlyph(GlyphSide);
+  if Glyph.Painted = 0 then Exit;
+  FillChar(Icons, SizeOf(Icons), 0);
+  Icons.ToolbarBmp := Glyph.Bmp;
+  Icons.ToolbarIcon := Glyph.Light;
+  Icons.ToolbarIconDarkMode := Glyph.Dark;
+  AddToolbarIcon(PanelMenuIndex, Icons);
 end;
 
 procedure TPlugin.Start;

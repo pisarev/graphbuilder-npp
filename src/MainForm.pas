@@ -1320,8 +1320,15 @@ begin
 end;
 
 constructor TMain.Create(NppParent: TNppPlugin; DlgId: Integer);
+var
+  Keys: string;
 begin
   inherited;
+  if Assigned(NppParent) then
+  begin
+    Keys := Trim(NppParent.ShortcutText(DlgId));
+    if Keys <> '' then Caption := Caption + '  (' + Keys + ')';
+  end;
 end;
 
 procedure TMain.Next(const Control: TWinControl; const Forward: Boolean);
