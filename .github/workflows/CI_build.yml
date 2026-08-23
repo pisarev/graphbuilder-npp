@@ -27,8 +27,8 @@ jobs:
       working-directory: .\
       run: |
            cd ..
-           git clone https://github.com/pisarev/pascal-mathparser.git
-           git clone https://github.com/pisarev/pascal-crossgraph.git
+           git clone --branch v1.3.3 --depth 1 https://github.com/pisarev/pascal-mathparser.git
+           git clone --branch v1.3.3 --depth 1 https://github.com/pisarev/pascal-crossgraph.git
            cd .\graphbuilder-npp
            git clone --branch 1.0.4078.44 https://github.com/salvadordf/WebView4Delphi.git
            $env:WEBVIEW4DELPHI = '.\WebView4Delphi'
@@ -48,9 +48,3 @@ jobs:
       with:
         name: ${{ env.Projectname }}_${{ steps.tagName.outputs.tag }}_${{ matrix.build_platform }}.zip
         path: ${{ env.Projectname }}_${{ steps.tagName.outputs.tag }}_${{ matrix.build_platform }}.zip
-
-    - name: Create release on tagging
-      uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: ${{ env.Projectname }}_${{ steps.tagName.outputs.tag }}_${{ matrix.build_platform }}.zip
