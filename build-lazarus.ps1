@@ -34,11 +34,106 @@ param([switch]$Keep)
 $ErrorActionPreference = 'Stop'
 $Here = $PSScriptRoot
 
-$LazDir = if ($env:LAZARUS_DIR) { $env:LAZARUS_DIR } else { 'C:\lazarus' }
-$Laz = Join-Path $LazDir 'lazbuild.exe'
-$Proj = Join-Path $Here 'lazarus\GraphBuilderLaz.lpi'
+<#
+  FINDING lazbuild, in a fixed order, and saying out loud which one won.
 
-if (-not (Test-Path $Laz)) { throw "no lazbuild: $Laz (set LAZARUS_DIR)" }
+  Three places are tried, and the order is deliberate.
+
+  1. LAZARUS_DIR, when it is set. An explicit setting is an instruction, not a
+     hint: if lazbuild.exe is not under it the build stops there, rather than
+     falling through to a default nobody asked for.
+  2. C:\lazarus, the default this script has always had. It stays ahead of PATH
+     so that a machine which built yesterday still builds today.
+  3. lazbuild on PATH. This is what lets a CI runner work without naming a
+     path: the setup action installs Lazarus where it likes and puts it there.
+
+  PATH is last on purpose. A developer machine can carry a second Lazarus - an
+  fpcupdeluxe tree beside a standard install - and PATH is not a toolchain
+  selector. Ahead of the default it would turn a loud, predictable failure into
+  a quiet build with the wrong compiler, and a broken build is cheaper than a
+  wrong one.
+
+  Whatever wins is printed, and so is any other candidate that resolves to a
+  DIFFERENT lazbuild.exe. The script may pick a default; it may not hide that a
+  choice was made.
+#>
+$Tried = @()
+
+if ($env:LAZARUS_DIR) {
+    $Wanted = Join-Path $env:LAZARUS_DIR 'lazbuild.exe'
+    $Tried += [pscustomobject]@{
+        From = 'LAZARUS_DIR'; Path = $Wanted; Found = (Test-Path $Wanted) }
+}
+else {
+    $Tried += [pscustomobject]@{
+        From = 'LAZARUS_DIR'; Path = '(not set)'; Found = $false }
+}
+
+$Stock = Join-Path 'C:\lazarus' 'lazbuild.exe'
+$Tried += [pscustomobject]@{
+    From = 'C:\lazarus'; Path = $Stock; Found = (Test-Path $Stock) }
+
+# The type restriction and the first match are both needed, and neither alone
+# is enough.
+#
+# Without -CommandType Application, Get-Command answers with whatever
+# PowerShell calls a command. A function or an alias named lazbuild shadows the
+# real program, and for those Source is EMPTY - so the candidate would look
+# found while carrying no path at all. Measured in Windows PowerShell 5.1 and
+# in 7: type=Function with an empty Source, same for an alias.
+#
+# With the restriction and nothing else, Get-Command returns EVERY matching
+# program rather than one. With lazbuild.exe in two PATH folders Source becomes
+# an array and the announced path turns into two paths glued together.
+# Select-Object -First 1 keeps the one PowerShell would actually run, which is
+# the first in PATH order.
+$OnPath = Get-Command lazbuild -CommandType Application -ErrorAction SilentlyContinue |
+          Select-Object -First 1
+
+# One predicate feeds both fields, so the candidate keeps a single invariant:
+# found means there is a real path, not found means there is an explanation.
+#
+# The inconsistent third state - not found, and no explanation either - is
+# already unreachable above, because -CommandType Application only ever yields
+# a program and a program always carries a Source. That was measured, not
+# assumed. Deriving both fields from one predicate keeps the state unreachable
+# without the next reader having to know why.
+$OnPathOk = [bool]($OnPath -and $OnPath.Source)
+$Tried += [pscustomobject]@{
+    From = 'PATH'
+    Path = $(if ($OnPathOk) { $OnPath.Source } else { '(no lazbuild program on PATH)' })
+    Found = $OnPathOk }
+
+# An explicit setting that is wrong stops here. Falling through would build with
+# a compiler the caller did not choose, and the caller would never learn that
+# the variable they set was ignored.
+if ($env:LAZARUS_DIR -and -not $Tried[0].Found) {
+    throw ("LAZARUS_DIR is set to '$env:LAZARUS_DIR' but there is no " +
+           "lazbuild.exe under it: $($Tried[0].Path). Correct the variable, " +
+           'or clear it and let the script look on its own.')
+}
+
+$Hit = $Tried | Where-Object { $_.Found } | Select-Object -First 1
+if (-not $Hit) {
+    $Lines = $Tried | ForEach-Object {
+        '    {0,-12} {1}' -f $_.From, $_.Path }
+    throw ("no lazbuild found. Tried, in order:`r`n" + ($Lines -join "`r`n"))
+}
+
+$Laz = $Hit.Path
+$LazDir = Split-Path $Laz
+Write-Host "lazbuild: $Laz (from $($Hit.From))"
+
+# A second candidate pointing at a DIFFERENT lazbuild.exe is worth a word: it is
+# not an error, but it is the thing that makes a build reproduce differently on
+# two machines that look alike.
+$Others = $Tried | Where-Object {
+    $_.Found -and $_.From -ne $Hit.From -and $_.Path -ne $Laz }
+foreach ($o in $Others) {
+    Write-Host "  also found, not used: $($o.Path) (from $($o.From))"
+}
+
+$Proj = Join-Path $Here 'lazarus\GraphBuilderLaz.lpi'
 if (-not (Test-Path $Proj)) { throw "no project: $Proj" }
 
 <#
