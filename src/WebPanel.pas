@@ -129,6 +129,27 @@ begin
   if Component is TCustomAction then Result := TCustomAction(Component);
 end;
 
+procedure LogStep(const Text: string);
+var
+  F: TextFile;
+  Name: string;
+begin
+  try
+    Name := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) + 'graphbuilder.log';
+    AssignFile(F, Name);
+    if FileExists(Name) then
+      Append(F)
+    else
+      Rewrite(F);
+    try
+      WriteLn(F, FormatDateTime('hh:nn:ss.zzz', Now), '  ', Text);
+    finally
+      CloseFile(F);
+    end;
+  except
+  end;
+end;
+
 function UiFile: string;
 var
   Buffer: array[0..MAX_PATH] of Char;
@@ -242,7 +263,11 @@ end;
 function TWebPanel.Start(const Kind: TThemeKind): Boolean;
 begin
   FKind := Kind;
-  if not FileExists(UiFile) then Exit(False);
+  if not FileExists(UiFile) then
+  begin
+    LogStep('panel: page not found: ' + UiFile);
+    Exit(False);
+  end;
   if not Assigned(FBrowser) then
   begin
     FBrowser := TEdgeBrowser.Create(Self);
@@ -259,8 +284,16 @@ begin
   try
     FBrowser.CreateWebView;
   except
-    Exit(False);
+    on E: Exception do
+    begin
+      LogStep('panel: CreateWebView failed: ' + E.ClassName + ': ' + E.Message);
+      FBrowser.Visible := False;
+      FGraph.Silent := False;
+      FGraph.Align := FAlign;
+      Exit(False);
+    end;
   end;
+  LogStep('panel: browser requested');
   Result := True;
 end;
 

@@ -109,7 +109,16 @@ button { border: 0; background: none; cursor: pointer; }
 }
 .hist button:hover { background: var(--line-soft); }
 .hist .empty { color: var(--ink-faint); font-size: 12px; padding: 8px 9px; }
-.field .fx { color: var(--ink-faint); font-style: italic; font-family: "Cambria Math", Georgia, serif; }
+/*
+    The caption of the field. In mathematical setting it is the LETTERS that go
+    in italics, while brackets and the equals sign stay upright - italic
+    brackets were what gave the scruffy look. The size is set explicitly:
+    without it the height of the row was taken, about 13 pixels, and a serif
+    italic at that size came out loose beside a monospaced field of the same
+    height. The colour is raised from --ink-faint - the tone of hints, the
+    palest in the theme - to --ink-dim.
+  */
+  .field .fx { color: var(--ink-dim); font-size: 15px; font-family: "Cambria Math", Georgia, serif; }
 .field input {
   flex: 1; min-width: 0; border: 0; outline: 0; background: none;
   font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 13px;
@@ -304,6 +313,15 @@ button.pf-swatch:focus-visible { outline: 2px solid var(--accent); outline-offse
 /* The look window of a curve: colour, width, dash. It keeps to its own row. */
 .pen-pop {
   position: absolute; z-index: 60; padding: 10px; border-radius: 12px;
+  /*
+    The backdrop blur is the same as on the function panel. Their opacity
+    was already the same, but the panel blurs what is behind it and this
+    window did not, so the graphs showed through the settings sharply.
+    Issue #7: "the settings are hard to see, but the graphs behind them
+    are all too visible".
+  */
+  backdrop-filter: blur(12px) saturate(1.4);  /* same as .float */
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
   background: var(--glass); border: 1px solid var(--edge);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .28); display: grid; gap: 8px;
   min-width: 176px;
@@ -408,6 +426,33 @@ canvas { display: block; width: 100%; height: 100%; }
 .tools .icon-btn { width: 32px; height: 32px; }
 
 .zoom { left: 12px; bottom: 12px; display: grid; padding: 3px; gap: 2px; }
+
+/*
+  A NARROW PANEL: THE BUTTON ROW MOVES TO THE BOTTOM.
+
+  The function panel sits on the left and is never wider than 258 pixels;
+  the button row is pinned to the right. While there is room they never meet,
+  but the plotting window gets docked to the side - and then it is narrow.
+  Issue #7: "the function panel overlaps the graph control buttons".
+
+  Measured 24.08.2026: the right edge of the panel is at 270, the left edge
+  of the button row is the width minus 308. The overlap starts below 578
+  pixels - at 560 that is 720 square pixels, at 380 already 7920. The
+  threshold is taken with a margin.
+
+  It is the buttons that move, not the panel: the panel carries the list of
+  formulas and the live traced value, and hiding it costs more.
+*/
+@media (max-width: 600px) {
+  .tools { top: auto; bottom: 12px; }
+  /*
+    The zoom buttons rise above the row. On a really narrow panel the row
+    stretches to the full width and covers them: measured at 320 pixels it
+    gave 1520 square pixels of overlap. The offset is the height of the row
+    plus a gap.
+  */
+  .zoom { bottom: 60px; }
+}
 
 .dock {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -790,6 +835,19 @@ select.num { text-align: left; width: 108px; }
   already on the page, so this costs nothing extra.
 */
 @media print {
+  /*
+    COLOURS SURVIVE ON PAPER.
+
+    When printing, the browser drops colours by default: it saves ink and
+    makes the background white. For the report that is wrong - colour
+    carries meaning there, it ties a row of the list to a curve on the
+    canvas. Issue #7: "in the report and in print the formula colours
+    stayed at the default".
+  */
+  .report, .report * {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
   /* The screen window ends here: on paper the height is not bounded. */
   html, body { height: auto; overflow: visible; background: #fff; }
   .app { display: block; height: auto; }
@@ -837,7 +895,7 @@ select.num { text-align: left; width: 108px; }
     </div>
 
     <div class="field">
-      <span class="fx">ƒ(x) =</span>
+      <span class="fx"><i>ƒ</i>(<i>x</i>) =</span>
       <input id="formula" value="Sin(X)" spellcheck="false" placeholder="type a formula and press Enter">
       <button class="icon-btn" id="histBtn" title="Formula history" aria-label="Formula history" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -874,7 +932,7 @@ select.num { text-align: left; width: 108px; }
       behaved until now, and a habit must not be changed without asking.
     -->
     <button class="icon-btn npp-only" id="liveBtn" hidden aria-pressed="true"
-            title="Live pick-up from the editor" aria-label="Live pick-up from the editor"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+            title="Live pick-up from the editor. Release it to pick up only on Alt+Shift+G" aria-label="Live pick-up from the editor. Release it to pick up only on Alt+Shift+G"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
     <button class="icon-btn" id="reportBtn" title="Report"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
     <button class="icon-btn" id="themeBtn" title="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
     <button class="icon-btn" id="gearBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -1482,9 +1540,11 @@ function answer(m) {
     }
     lastBuildMs = m.ms || 0;
     document.querySelector(".statusbar").classList.remove("busy");
-    el("status").textContent = m.error
-      ? m.error
-      : (m.points || 0).toLocaleString("ru") + " points, " + (m.ms || 0) + " ms";
+    const facts = (m.points || 0).toLocaleString("ru") + " points, " + (m.ms || 0) + " ms";
+    const note = caretNote();
+    const line = m.error ? m.error : (note ? note + "  |  " + facts : facts);
+    el("status").textContent = line;
+    el("status").title = line;
     drawPanel(); paint();
     return;
   }
@@ -1671,7 +1731,7 @@ function answer(m) {
                             + s.points[s.points.length - 1].y === sign))
         tables.forEach(one => addSeries(one, true));
     } else {
-      const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
+      const list = (m.list || []).map(s => String(s || "").trim()).filter(plottable);
       list.forEach(text => {
         if (curves.some(c => c.text === text)) return;
         curves.push({ text: text, on: true, trace: true, color: null,
@@ -1729,7 +1789,7 @@ function answer(m) {
     dropPreview();
     const tables = parseTables(m.text);
     if (tables.length) { tables.forEach(one => addSeries(one)); return; }
-    const list = (m.list || []).map(s => String(s || "").trim()).filter(Boolean);
+    const list = (m.list || []).map(s => String(s || "").trim()).filter(plottable);
     let added = 0;
     list.forEach(text => {
       if (curves.some(c => c.text === text)) return;
@@ -1933,6 +1993,15 @@ function applySnapshot(m) {
     data.extremes = { max: [], min: [] };
     data.trace = null;
   }
+  /*
+    With the ratio on, the height is a RESULT, not a stored number. A snapshot
+    taken in a window of ANOTHER shape brings a height that does not fit this
+    canvas, and the cell comes out of square: a circle in polar coordinates
+    draws as an ellipse until the first resize of the window, when size()
+    finally runs. Computed here from the same two numbers size() takes.
+  */
+  if (opt.keepRatio && canvas.clientWidth > 0)
+    view.h = view.w * (canvas.clientHeight / canvas.clientWidth);
   syncControls();
   drawPanel();
   build();
@@ -1966,8 +2035,11 @@ function syncControls() {
   });
   document.querySelectorAll(".num[data-opt]").forEach(n => {
     const k = n.dataset.opt;
-    if (k === "maxX") n.value = view.w;
-    else if (k === "maxY") n.value = view.h;
+    // Inside it keeps the half, the field holds the FULL value - as syncView
+    // fills it and as it is typed by hand. Without the doubling the field
+    // showed half of what was drawn, and disagreed with itself at the first size().
+    if (k === "maxX") n.value = view.w * 2;
+    else if (k === "maxY") n.value = view.h * 2;
     else if (k === "centerX") n.value = view.cx;
     else if (k === "centerY") n.value = view.cy;
     else if (k in opt) n.value = opt[k];
@@ -2240,7 +2312,10 @@ function demoReport() {
 
   out += '<h3>Formulas</h3><div class="chips">';
   curves.forEach((c, i) => {
-    if (c.on) out += '<span class="chip">' + named(i) + "</span>";
+    // The curve colour carries over into the list: it is what ties a
+    // report row to what is drawn on the canvas.
+    if (c.on) out += '<span class="chip" style="color: ' + curveInk(c, i) +
+      '; box-shadow: inset 2px 0 0 ' + curveInk(c, i) + '">' + named(i) + "</span>";
   });
   out += "</div>";
 
@@ -2540,6 +2615,46 @@ const withoutEditor = (key, value) =>
   out of a table is a number, not three fields.
 */
 const TableSeps = [";", "\t", ",", " "];
+
+/*
+  A LINE THAT CANNOT YIELD A VALUE IS NOT A FORMULA.
+
+  Measured 24.08.2026, issue #7: a lone dot from the selection got into the
+  list of formulas and drew an empty curve. Requiring a digit will not do -
+  `pi`, `exp` and their combinations are legal and contain no digits. What is
+  needed is anything a value can come out of: a digit or a letter. Punctuation
+  on its own yields nothing.
+*/
+/*
+  THE ^ SIGN IS NOT A POWER, AND THAT HAS TO BE SAID OUT LOUD.
+
+  Issue #5: someone wrote x^2, got something nonsensical on the canvas and
+  decided they had misunderstood the syntax for powers. In fact ^ is bitwise
+  exclusive or: it does return a number, just never the one that was meant.
+  The reference says so in plain words, but not everyone gets as far as the
+  reference, while the status line is in front of them anyway.
+
+  The note appears only when ^ stands BETWEEN values: on its own the sign is
+  legal, and there is nothing to scold about.
+
+  The note comes BEFORE the numbers and is kept SHORT. Measured 24.08.2026 on
+  the live panel in the editor: about forty characters fit into the bar, and
+  the rest is an ellipsis. A long note was cut off exactly where it became
+  useful - one read "^ IS EXCLUSIVE OR, ..." and never learned what to write
+  instead. Moving it to the front did not cure that: it then cut off at "WRITE
+  A...". So the text is reduced to what the reader has to DO, and fits whole.
+  The counts of points and milliseconds lose less to the cut: they are for
+  reference, while this is a warning about a wrong answer. The whole line stays
+  in the tooltip of the bar.
+*/
+function caretNote() {
+  const has = curves.some(c => c.on && /[\w.)]\s*\^\s*[\w.(]/.test(String(c.text || "")));
+  return has ? "^ is not a power - use x ** 2" : "";
+}
+
+function plottable(s) {
+  return /[\p{L}\p{N}]/u.test(String(s || ""));
+}
 
 function tableNumber(s) {
   const t = String(s).trim().replace(",", ".").replace(/\s/g, "");
@@ -4752,7 +4867,7 @@ function refDraw(filter) {
     parts.push(rows.join(""));
   });
   list.innerHTML = parts.length ? parts.join("") : "<p class='empty'>Nothing found.</p>";
-  el("helpNote").textContent = need ? ("shown" + shown) : ("all of them," + shown);
+  el("helpNote").textContent = need ? ("shown " + shown) : ("all of them " + shown);
 }
 
 function refLoad() {

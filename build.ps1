@@ -84,6 +84,25 @@ if ($LASTEXITCODE -ne 0) { throw 'build failed' }
   the page never reaches the plugin, and it quietly runs the old copy. The same
   page is used by the Lazarus build.
 #>
+<#
+  The WebView2 loader travels beside the library, the same way the Lazarus build
+  does it: install.ps1 takes the loader from next to $Source, and for this build
+  that is the out folder. Without this step the switch -Delphi installs a plugin
+  without the loader, while the archive and the Lazarus recipe both carry it.
+#>
+# A warning here is not enough. The build would report success, install.ps1 would
+# then refuse, and the reader would meet the wall one step away from its cause -
+# which is exactly what happened on a clean stand on 27.08.2026. The build stops
+# where the thing is missing.
+if (-not $env:WEBVIEW4DELPHI) {
+    throw ('WEBVIEW4DELPHI is not set. The panel is drawn by WebView2, and its loader comes from a WebView4Delphi checkout: point the variable at one and build again.')
+}
+$Loader = Join-Path $env:WEBVIEW4DELPHI 'bin64\WebView2Loader.dll'
+if (-not (Test-Path $Loader)) {
+    throw "WebView2Loader.dll is not at $Loader. Check the checkout named by WEBVIEW4DELPHI."
+}
+Copy-Item $Loader $Out -Force
+
 $Ui = Join-Path $Out 'ui'
 New-Item -ItemType Directory -Force $Ui | Out-Null
 Copy-Item (Join-Path $Here 'web\index.html') $Ui -Force

@@ -80,21 +80,28 @@ engine, go back further, to 10.2 Tokyo; the plugin does not, and the difference
 is that one missing unit.
 
 WebView4Delphi is not vendored here - it is a third-party library under its own
-licence. Point `WEBVIEW4DELPHI` at a checkout of it before building the Lazarus
-version; the project needs its Lazarus package as well, and `build-lazarus.ps1`
-registers that for you rather than expecting it to be installed already.
+licence. Its source is not part of this repository; one binary out of it is:
+`WebView2Loader.dll`, which is Microsoft's and travels inside the release
+archive under the terms of the WebView2 SDK. `INSTALL.txt` in the archive says
+the same, so whoever unpacks it is told without coming here first.
+
+Point `WEBVIEW4DELPHI` at a checkout of it before building EITHER version - the
+Lazarus one needs its Lazarus package, the Delphi one needs that loader.
+`build-lazarus.ps1` registers the package for you rather than expecting it to be
+installed already.
 
 ## Installation
 
 ### From the release
 
 The releases page carries a built plugin - the Lazarus one - as
-`GraphBuilder-npp-<version>-win64.zip`. Four files come out of it:
+`GraphBuilder-npp-<version>-win64.zip`. Five files come out of it:
 
 ```
 GraphBuilderLaz.dll
 WebView2Loader.dll
 ui/index.html
+syntax.xml
 INSTALL.txt
 ```
 
@@ -119,8 +126,12 @@ it.
 ### Building it, from nothing
 
 Both compilers start the same way: an empty folder with the checkouts side by
-side. The commands are for `cmd`; where PowerShell needs something else it is
-said on the spot.
+side. The three commands below clone them with git, and a Windows without git
+answers that `git` is not recognized. Git is the shortest way here, not the only
+one: every repository named in this section can be taken as a zip instead - the
+green `Code` button on its page, `Download ZIP` - and unpacked side by side under
+the same folder names. The commands are for `cmd`; where PowerShell needs
+something else it is said on the spot.
 
 ```
 mkdir %USERPROFILE%\Desktop\PascalPlot
@@ -154,14 +165,27 @@ powershell -ExecutionPolicy Bypass -File build-lazarus.ps1
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-The commands are for the PowerShell that ships with Windows; nothing here needs
-PowerShell 7. `-ExecutionPolicy Bypass` is what lets a downloaded script run
-under the default policy, and it holds for that one run only.
+These lines are typed in `cmd`, as everywhere in this section; the scripts
+themselves run under the PowerShell that ships with Windows, and nothing here
+needs PowerShell 7. `-ExecutionPolicy Bypass` is what lets a downloaded script
+run under the default policy, and it holds for that one run only. Typing the
+script name on its own does not run it: `cmd` hands a `.ps1` to whatever program
+is associated with the extension - usually an editor - and nothing happens, with
+no error to explain it. The second line copies into `Program Files`, so that
+prompt has to be started as administrator.
 
 The tag is worth keeping. WebView4Delphi carries its own `WebView2Loader.dll`,
 and the one beside a release comes from `1.0.4078.44`; the tip of the branch
 moves and brings a different loader with it. `LAZARUS_DIR` is only needed when
 Lazarus is somewhere other than `C:\lazarus`.
+
+This build compiles the library, so the whole of it has to be there: `lazbuild`
+registers `packages\webview4delphi.lpk`, and the project reads its units from
+`source\`. The single `WebView2Loader.dll` that is enough for the Delphi build
+is not enough here. Without git, take the same tag as a zip -
+https://github.com/salvadordf/WebView4Delphi/archive/refs/tags/1.0.4078.44.zip -
+and unpack it; the folder comes out with the version in its name, so either
+rename it to `WebView4Delphi` or point `WEBVIEW4DELPHI` at it as it is.
 
 Out comes `lazarus\bin\GraphBuilderLaz.dll` with `WebView2Loader.dll` and
 `ui\index.html` beside it. `install.ps1` puts those three where they belong,
@@ -204,16 +228,40 @@ Then copy those three into `plugins\GraphBuilderLaz\`.
 Delphi 11 Alexandria or newer. The floor is one missing unit: this build reaches
 WebView2 through `Winapi.WebView2`, which Embarcadero began shipping in the RTL
 with 11 - on 10.2, 10.3 and 10.4 it is simply absent, and no search path brings
-it back. WebView4Delphi is not needed here.
+it back.
+
+The compiler needs nothing else; the panel does. It is drawn by WebView2, and
+the loader for it - `WebView2Loader.dll` - is Microsoft's, shipped in the
+WebView2 SDK; WebView4Delphi carries a copy in its `bin64`. Point
+`WEBVIEW4DELPHI` at a checkout of that library and the build puts the loader
+where the installer will look for it. The first line below fetches it: that
+library is not part of this release, so having the sources by any other means -
+a copy, an archive, a colleague - does not bring it with them.
+
+Without the variable the build stops and says so, rather than producing a plugin
+that starts and shows the wrong window.
 
 ```
+git clone --branch 1.0.4078.44 https://github.com/salvadordf/WebView4Delphi.git
+set WEBVIEW4DELPHI=%CD%\WebView4Delphi
 cd graphbuilder-npp
 powershell -ExecutionPolicy Bypass -File build.ps1
 powershell -ExecutionPolicy Bypass -File install.ps1 -Delphi
 ```
 
+No git on this machine? The build wants one file out of that checkout, not the
+checkout itself. Make the folders by hand and put `WebView2Loader.dll` from the
+release archive into them:
+
+    WebView4Delphi\bin64\WebView2Loader.dll
+
+Then point `WEBVIEW4DELPHI` at that `WebView4Delphi` folder as above. It is the
+same file either way: the archive takes its copy from there. The shortcut is for
+this build alone - the Lazarus one compiles the library and needs all of it.
+
 The switch is not optional on the second step: without it `install.ps1` looks for
-the Lazarus library and does not find it.
+the Lazarus library and does not find it. That step copies into `Program Files`,
+so the prompt has to be started as administrator.
 
 `build.ps1` finds the studio itself: `BDS_BIN` if you set it, then the variable
 RAD Studio sets for its own command prompt, then the registry - the newest
@@ -236,8 +284,33 @@ dcc64 -B -Q -U"src;bindings;..\pascal-mathparser\src;..\pascal-mathparser\jit;..
 Keep the quotes in PowerShell: `-NS` carries semicolons, and unquoted they are
 read as command separators before the compiler ever sees them.
 
-Then `out\GraphBuilder.dll` goes into `plugins\GraphBuilder\` and
-`web\index.html` into `plugins\GraphBuilder\ui\`.
+Four things then go into place, not two. Where each comes from, and where it
+goes:
+
+    take this file                              put it here
+    ------------------------------------------  ---------------------------
+    out\GraphBuilder.dll                        plugins\GraphBuilder\
+    web\index.html                              plugins\GraphBuilder\ui\
+    web\syntax.xml                              plugins\GraphBuilder\
+    %WEBVIEW4DELPHI%\bin64\WebView2Loader.dll   next to notepad++.exe
+
+The last row is the odd one, and it is worth knowing why. The panel is drawn by
+WebView2, and `TEdgeBrowser` asks for its loader by plain name. Windows looks
+for such a name in the folder of the running program - the editor - and never in
+the folder of the library that asks. A copy inside the plugin folder is
+therefore invisible to it. The file belongs in the same folder as the editor
+itself, which on a normal installation means:
+
+    C:\Program Files\Notepad++\WebView2Loader.dll
+
+Two places give you that file. The release archive carries it, so unpacking the
+archive anywhere and taking the one file out of it is the shortest way. The
+other is the WebView4Delphi checkout named by `WEBVIEW4DELPHI`, subfolder
+`bin64` - the same copy, since the archive takes it from there.
+
+`install.ps1 -Delphi` puts all four where they belong, and refuses if the loader
+is not there - better a refusal than a plugin that starts and shows the wrong
+window.
 
 There is no `.dproj` here, so a project made from the `.dpr` starts with an empty
 search path, and that `-U` list is what goes into it. The same paths have to be
