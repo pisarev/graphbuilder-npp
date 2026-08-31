@@ -1,6 +1,6 @@
 # GraphBuilder - plotting inside Notepad++
 
-A docked panel that plots the formula under your mouse. Press Alt+G to open it,
+A docked panel that plots the formula under your mouse. Press Alt+B to open it,
 then point at a line of your file: if what is there parses as a formula, the
 curve appears - with its roots, its intersections and its extrema found for you.
 Select an expression and the selection wins over the line.
@@ -106,7 +106,7 @@ INSTALL.txt
 ```
 
 Close Notepad++, unpack them into `plugins\GraphBuilderLaz\` under your editor,
-start it again, and press Alt+G.
+start it again, and press Alt+B.
 
 Three conditions, and each of them fails quietly when it is not met:
 
@@ -121,7 +121,14 @@ Three conditions, and each of them fails quietly when it is not met:
 
 Installing into `Program Files` needs administrator rights. The panel is a web
 page in WebView2, so the WebView2 runtime has to be present - Windows 11 ships
-it.
+it - and it has to be 150.0.4078.44 or newer. That number is not a preference:
+the build declares it to WebView2 as the version it is compatible with, and an
+older runtime is refused by Microsoft's loader before the panel is ever drawn.
+Two registry queries read the installed one - the first is the machine-wide
+install, the second the per-user one, and whichever answers is the one in force:
+
+    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" /v pv
+    reg query "HKCU\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" /v pv
 
 ### Building it, from nothing
 

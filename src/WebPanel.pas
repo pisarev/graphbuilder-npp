@@ -19,7 +19,8 @@ uses
   CrossVision.Geometry.Types, DarkTheme;
 
 type
-  TBookmarkEvent = function(const Slot: Integer; const Mode: string): string of object;
+  TBookmarkEvent = function(const Slot: Integer; const Mode: string;
+    const From: Integer): string of object;
   TEditorEvent = procedure(const NewDocument: Boolean) of object;
   TReportEvent = function: string of object;
 
@@ -55,12 +56,13 @@ type
     procedure Apply(const Root: TJSONObject);
     procedure Rebuild;
     procedure HideBelow;
-    function BookmarkSlot(const Slot: Integer; const Mode: string): string;
+    function BookmarkSlot(const Slot: Integer; const Mode: string; const From: Integer): string;
   protected
     function Curves: string;
     function Overlaps: string;
     function Extremes: string;
     function Trace(const Param: Extended): string;
+    function Fit: string;
     function Snapshot: string;
     function ReportPage: string;
     function CountPoints(const Answer: string): Integer;
@@ -151,12 +153,22 @@ begin
 end;
 
 function UiFile: string;
+const
+  Places: array[0..2] of string = ('ui\index.html', 'index.html', 'web\index.html');
 var
   Buffer: array[0..MAX_PATH] of Char;
+  Folder: string;
+  Place: Integer;
 begin
   FillChar(Buffer, SizeOf(Buffer), 0);
   GetModuleFileName(HInstance, Buffer, Length(Buffer));
-  Result := IncludeTrailingPathDelimiter(ExtractFilePath(Buffer)) + 'ui\index.html';
+  Folder := IncludeTrailingPathDelimiter(ExtractFilePath(Buffer));
+  for Place := Low(Places) to High(Places) do
+  begin
+    Result := Folder + Places[Place];
+    if FileExists(Result) then Exit;
+  end;
+  Result := Folder + Places[Low(Places)];
 end;
 
 function Number(const Value: Extended): string;
@@ -268,6 +280,7 @@ begin
     LogStep('panel: page not found: ' + UiFile);
     Exit(False);
   end;
+  LogStep('panel: page taken from ' + UiFile);
   if not Assigned(FBrowser) then
   begin
     FBrowser := TEdgeBrowser.Create(Self);
@@ -600,6 +613,137 @@ begin
   end;
 end;
 
+function TWebPanel.Fit: string;
+const
+  Samples = 1200;
+  Trim = 0.02;
+  Room = 0.06;
+  Limit = 1E12;
+var
+  Ys, Xs: array of Double;
+  NY, NX, I, K, Live: Integer;
+  Polar: Boolean;
+  Data: PFormulaData;
+  Point: TPointD;
+  Left, Right, Step, T, Mid, Half: Double;
+
+  procedure Keep(var A: array of Double; var N: Integer; const V: Double);
+  begin
+    if IsNan(V) or IsInfinite(V) then Exit;
+    if N > High(A) then Exit;
+    A[N] := V;
+    Inc(N);
+  end;
+
+  procedure Sort(var A: array of Double; const L, R: Integer);
+  var
+    I, J: Integer;
+    Pivot, Swap: Double;
+  begin
+    if L >= R then Exit;
+    I := L;
+    J := R;
+    Pivot := A[(L + R) div 2];
+    while I <= J do
+    begin
+      while A[I] < Pivot do Inc(I);
+      while A[J] > Pivot do Dec(J);
+      if I <= J then
+      begin
+        Swap := A[I];
+        A[I] := A[J];
+        A[J] := Swap;
+        Inc(I);
+        Dec(J);
+      end;
+    end;
+    Sort(A, L, J);
+    Sort(A, I, R);
+  end;
+
+  function Refuse(const Why: string): string;
+  begin
+    Result := '{"type":"fit","ok":false,"note":"' + Why + '"}';
+  end;
+
+  function Middle(var A: array of Double; const N: Integer; out ACenter, AHalf: Double): Boolean;
+  var
+    C: Integer;
+    Lo, Hi: Double;
+  begin
+    Sort(A, 0, N - 1);
+    C := Trunc(N * Trim);
+    Lo := A[C];
+    Hi := A[N - 1 - C];
+    ACenter := (Lo + Hi) / 2;
+    AHalf := (Hi - Lo) / 2;
+    if AHalf <= 0 then AHalf := 1;
+    AHalf := AHalf * (1 + Room);
+    Result := not (IsNan(ACenter) or IsInfinite(ACenter) or IsNan(AHalf) or IsInfinite(AHalf) or
+      (Abs(ACenter) > Limit) or (AHalf > Limit));
+  end;
+
+begin
+  Polar := FGraph.CS = csPolar;
+  Live := 0;
+  for I := 0 to FGraph.Formula.Count - 1 do
+    if Assigned(FGraph.Formula.Data[I]) and FGraph.Formula.Active[I] and
+      FGraph.Formula.Tracing[I] then
+        Inc(Live);
+  if Live = 0 then
+    Exit(Refuse('no curve is being traced - nothing to fit'));
+  SetLength(Ys, Samples * Live);
+  SetLength(Xs, Samples * Live);
+  NY := 0;
+  NX := 0;
+  if Polar then
+  begin
+    Left := 0;
+    Right := FGraph.PolarMaxAngle;
+    if (Right <= Left) or IsNan(Right) or IsInfinite(Right) then
+      Right := Left + 2 * Pi;
+  end
+  else begin
+    Left := -FGraph.Offset.X - FGraph.MaxX;
+    Right := -FGraph.Offset.X + FGraph.MaxX;
+  end;
+  Step := (Right - Left) / (Samples - 1);
+  for I := 0 to FGraph.Formula.Count - 1 do
+  begin
+    Data := FGraph.Formula.Data[I];
+    if not Assigned(Data) or not FGraph.Formula.Active[I] then Continue;
+    if not FGraph.Formula.Tracing[I] then Continue;
+    if not CrossGraph.Engine.Check(FGraph.SA, Data.ScriptIndex) then Continue;
+    for K := 0 to Samples - 1 do
+    begin
+      T := Left + K * Step;
+      if Polar then
+        Point := FGraph.ComputePolar(T, FGraph.SA[Data.ScriptIndex])
+      else
+        Point := FGraph.ComputeRectangular(T, FGraph.SA[Data.ScriptIndex]);
+      Keep(Ys, NY, Point.Y);
+      if Polar then Keep(Xs, NX, Point.X);
+    end;
+  end;
+  if NY < 8 then
+    Exit(Refuse('the curve gave no finite values over this range'));
+  if not Middle(Ys, NY, Mid, Half) then
+    Exit(Refuse('the fitted view came out beyond sane limits'));
+  FGraph.MaxY := Half;
+  FGraph.Offset := PointD(FGraph.Offset.X, -Mid);
+  if Polar and (NX >= 8) and Middle(Xs, NX, Mid, Half) then
+  begin
+    FGraph.MaxX := Half;
+    FGraph.Offset := PointD(-Mid, FGraph.Offset.Y);
+  end;
+  Rebuild;
+  Result := '{"type":"fit","ok":true,"maxX":' + Number(FGraph.MaxX) +
+    ',"maxY":' + Number(FGraph.MaxY) +
+    ',"centerX":' + Number(-FGraph.Offset.X) +
+    ',"centerY":' + Number(-FGraph.Offset.Y) +
+    ',"note":"fitted over ' + IntToStr(NY) + ' values"}';
+end;
+
 function TWebPanel.Trace(const Param: Extended): string;
 var
   Text: TStringBuilder;
@@ -794,10 +938,11 @@ begin
   end;
 end;
 
-function TWebPanel.BookmarkSlot(const Slot: Integer; const Mode: string): string;
+function TWebPanel.BookmarkSlot(const Slot: Integer; const Mode: string;
+  const From: Integer): string;
 begin
   if Assigned(FOnBookmark) then
-    Result := FOnBookmark(Slot, Mode)
+    Result := FOnBookmark(Slot, Mode, From)
   else
     Result := Bookmarks;
 end;
@@ -929,11 +1074,15 @@ begin
       Rebuild;
       Exit('{"type":"busy"}');
     end;
+    if Value.Value = 'fit' then
+      Exit(Fit);
     if Value.Value = 'trace' then
       Exit(Trace(Root.GetValue<Double>('param', 0)));
     if Value.Value = 'bookmark' then
     begin
-      Result := BookmarkSlot(Root.GetValue<Integer>('slot', 0), Root.GetValue<string>('mode', 'status'));
+      Result := BookmarkSlot(Root.GetValue<Integer>('slot', 0),
+        Root.GetValue<string>('mode', 'status'),
+        Root.GetValue<Integer>('from', -1));
       Exit;
     end;
     if Value.Value = 'copy' then
@@ -974,7 +1123,8 @@ begin
     end;
     if Value.Value = 'ready' then
     begin
-      Post('{"type":"hello","engine":"crossgraph","editor":true,"budgets":true}');
+      Post('{"type":"hello","engine":"crossgraph","editor":true,"budgets":true,'
+        + '"version":"' + PluginVersion + '"}');
       if not PostState then Post(Snapshot);
       Exit('');
     end;

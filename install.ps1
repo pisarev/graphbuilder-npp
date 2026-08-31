@@ -109,4 +109,4 @@ Write-Host "Interface page: $(Join-Path $UiTarget 'index.html')"
 Write-Host "Reference: $(Join-Path $Folder 'syntax.xml')"
 Write-Host "WebView2 loader: $(Join-Path $Folder 'WebView2Loader.dll')"
 if ($Delphi) { Write-Host "WebView2 loader for the editor: $(Join-Path $Npp 'WebView2Loader.dll')" }
-Write-Host 'Open Notepad++ and press Alt+G.'
+Write-Host 'Open Notepad++ and press Alt+B.'

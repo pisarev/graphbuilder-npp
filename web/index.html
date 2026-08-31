@@ -282,6 +282,35 @@ button { border: 0; background: none; cursor: pointer; }
 .panel.folded .panel-fold svg { transform: rotate(-90deg); }
 .panel-list { overflow-y: auto; max-height: min(46vh, 340px); padding: 1px 5px 0; scrollbar-width: thin; }
 .panel.folded .panel-list, .panel.folded .panel-add { display: none; }
+/*
+  THE PANEL PUT AWAY ENTIRELY. Asked for by bms-2015 in issue #7: fold it down
+  to a button. The old folding hides only the list - the header stays and takes
+  up a corner of the canvas; on the narrow editor panel that is exactly where
+  the graph is needed.
+
+  The button stands EXACTLY where the panel was, the same twelve pixels from
+  the edge: otherwise the eye loses it on the very first return.
+*/
+.panel.away { display: none; }
+/*
+  The notice about halves that disagree. It sits at the bottom centre, above
+  everything and without a close button: while the mismatch is alive it
+  explains any oddity in the work, and hiding it would leave the person
+  guessing.
+*/
+.stale-halves {
+  position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%);
+  max-width: min(640px, calc(100% - 24px)); z-index: 99;
+  padding: 8px 14px; border-radius: var(--radius);
+  background: var(--glass); border: 1px solid var(--line);
+  box-shadow: var(--shadow); color: var(--ink);
+  font-size: 12px; line-height: 1.45; text-align: center;
+}
+.panel-show {
+  left: 12px; top: 12px; width: 32px; height: 32px; z-index: 3;
+  display: none; align-items: center; justify-content: center; padding: 0;
+}
+.panel-show.on { display: flex; }
 
 .pf-row {
   position: relative; display: flex; align-items: center; gap: 9px;
@@ -916,8 +945,20 @@ select.num { text-align: left; width: 108px; }
 
     <div class="sep"></div>
 
-    <button class="icon-btn" id="copyBtn" title="Copy state"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="11" height="13" rx="2"/><path d="M8 20h9a2 2 0 0 0 2-2V8"/></svg></button>
-    <button class="icon-btn" id="pasteBtn" title="Paste state"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V5"/></svg></button>
+    <!--
+      Two buttons, not one. Asked by bms-2015, issue #10 of 28.08.2026,
+      point 6: why two buttons at all, when there are bookmarks.
+
+      They are needed; it was the labels that misled. Bookmarks are ten
+      cells inside the panel, and nothing leaves it. These two work through
+      the clipboard: the state can be taken outside - into a mail, a file,
+      onto another machine, to another person.
+
+      So they stay, and the labels now say what they do: it used to read
+      "copy state", which read as "remember it".
+    -->
+    <button class="icon-btn" id="copyBtn" title="Copy state to the clipboard"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="11" height="13" rx="2"/><path d="M8 20h9a2 2 0 0 0 2-2V8"/></svg></button>
+    <button class="icon-btn" id="pasteBtn" title="Paste state from the clipboard"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V5"/></svg></button>
     <!-- A caption without the word "report": both the plot AND the report are
          printed, and the promise has to match the deed. -->
     <button class="icon-btn" id="printBtn" title="Print"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="7" rx="2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg></button>
@@ -925,14 +966,14 @@ select.num { text-align: left; width: 108px; }
     <button class="icon-btn npp-only" id="toCaretBtn" title="Report at the caret" hidden><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h7M4 17h10"/><path d="M17 9v9M14 12l3-3 3 3"/></svg></button>
     <!--
       LIVE PICK-UP. Asked for by bms-2015 in issue #4: "a button for the live
-      search - pressed: live, released: Alt+Shift+G only".
+      search - pressed: live, released: Alt+Shift+B only".
 
       The button is in the plugin only: on the site there is nothing to pick up,
       there is no editor there. Pressed by default - that is how the panel has
       behaved until now, and a habit must not be changed without asking.
     -->
     <button class="icon-btn npp-only" id="liveBtn" hidden aria-pressed="true"
-            title="Live pick-up from the editor. Release it to pick up only on Alt+Shift+G" aria-label="Live pick-up from the editor. Release it to pick up only on Alt+Shift+G"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+            title="Live pick-up from the editor. Release it to pick up only on Alt+Shift+B" aria-label="Live pick-up from the editor. Release it to pick up only on Alt+Shift+B"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
     <button class="icon-btn" id="reportBtn" title="Report"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
     <button class="icon-btn" id="themeBtn" title="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
     <button class="icon-btn" id="gearBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -949,12 +990,22 @@ select.num { text-align: left; width: 108px; }
     -->
     <div class="sep"></div>
     <button class="icon-btn" id="undoBtn" title="Nothing to undo" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="icon-btn" id="redoBtn" title="Nothing to redo" disabled><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
     <button class="icon-btn" id="clearBtn" title="Clear the panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M9 6V4h6v2M6 6l1 15h10l1-15"/></svg></button>
   </div>
 
   
   <div class="stage" id="stage">
     <canvas id="plot"></canvas>
+
+    <!--
+      The button that brings the panel back. It stands where the panel itself
+      was, so the person goes to bring it back where they put it away.
+    -->
+    <button class="float panel-show icon-btn" id="panelShow" title="Show the function panel"
+            aria-label="Show the function panel">
+      <svg viewBox="0 0 24 24"><path d="M3 12c3.24-6 5.76-6 9 0s5.76 6 9 0"/></svg>
+    </button>
 
     <!-- The panel of functions: colour, text, the live trace value, controls -->
     <div class="float panel" id="panel">
@@ -975,8 +1026,17 @@ select.num { text-align: left; width: 108px; }
           <span id="serCount" hidden>series<em id="serNum">0</em></span>
         </span>
         <span class="panel-param" id="traceParam"></span>
-        <button class="icon-btn panel-fold" id="panelFold" title="Collapse">
+        <button class="icon-btn panel-fold" id="panelFold" title="Fold the list">
           <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <!--
+          Put the panel away entirely. A separate button, not a second press on
+          the first one: two different outcomes from one gesture are not
+          something a person remembers.
+        -->
+        <button class="icon-btn panel-fold" id="panelHide" title="Put the panel away"
+                aria-label="Put the function panel away">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
         </button>
       </div>
       <div class="panel-list" id="panelList"></div>
@@ -996,6 +1056,7 @@ select.num { text-align: left; width: 108px; }
       <button class="icon-btn" title="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
       <button class="icon-btn" title="Zoom out"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
       <button class="icon-btn" title="Back to origin"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button class="icon-btn" title="Fit to screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M8.5 8.5h7v7h-7z"/></svg></button>
     </div>
 
     <div class="float tools" id="tools">
@@ -1008,7 +1069,7 @@ select.num { text-align: left; width: 108px; }
       <button class="icon-btn" aria-pressed="true" data-t="sign" title="Curve labels"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9z"/><circle cx="16.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg></button>
       <!--
         THE POINT TABLE. This button does not exist in the plugin: there the
-        data comes from the editor - by selection or Alt+Shift+G - and a second
+        data comes from the editor - by selection or Alt+Shift+B - and a second
         road to the same place would only confuse. Shown by the web-only mark,
         see the hello handler.
 
@@ -1417,7 +1478,7 @@ const view = { cx: 0, cy: 0, w: 10, h: 3.2 };
   LIVE PICK-UP is on by default: that is how the panel worked before the button
   appeared. A released button puts out TWO roads - the suggestion from the line
   under the cursor and the preview of a selection - leaving only the deliberate
-  Alt+Shift+G. Whether it is pressed is kept in the state, so it survives a
+  Alt+Shift+B. Whether it is pressed is kept in the state, so it survives a
   reload and bookmarks.
 */
 let liveCatch = true;
@@ -1512,13 +1573,22 @@ if (host) host.addEventListener("message", e => {
 });
 
 function answer(m) {
+  fromHost++;
+  try { fromHostAnswer(m); } finally { fromHost--; }
+  // The list held back for the duration of an edit is redrawn in finish. If
+  // the edit is already closed and the mark is still there, we catch up right
+  // here, or the screen would disagree with the data until the next action.
+  if (panelStale && !editing()) drawPanel();
+}
+
+function fromHostAnswer(m) {
   if (m.type === "reference") {
     // The host brought the reference: a page opened from a file cannot read its neighbour.
     refBusy = false;
     refShow(m.text || "");
     return;
   }
-  if (m.type === "busy") { el("status").textContent = "computing..."; return; }
+  if (m.type === "busy") { sayIfFree("computing..."); return; }
   if (m.type === "curves") {
     data.seg = m.list || [];
     data.seg.forEach(c => { if (curves[c.i]) curves[c.i].color = c.color; });
@@ -1543,9 +1613,17 @@ function answer(m) {
     const facts = (m.points || 0).toLocaleString("ru") + " points, " + (m.ms || 0) + " ms";
     const note = caretNote();
     const line = m.error ? m.error : (note ? note + "  |  " + facts : facts);
-    el("status").textContent = line;
-    el("status").title = line;
-    drawPanel(); paint();
+    sayIfFree(line);
+    /*
+      THE LIST IS LEFT ALONE WHILE A ROW IS BEING EDITED, and it is not the
+      condition here that decides it but the common boundary by source - see
+      fromHost where rowEditing is declared. The engine answer arrives late: it
+      is about the PREVIOUS action, while the person is already typing into the
+      field, and a redraw would take what they typed away. The canvas is always
+      painted: it does not touch rows.
+    */
+    drawPanel();
+    paint();
     return;
   }
   if (m.type === "overlaps") {
@@ -1612,7 +1690,7 @@ function answer(m) {
 
     The point table button belongs anywhere the data has nowhere else to come
     from: on the site, in a standalone Lazarus window. In Notepad++ it is one
-    button too many - there a selection and Alt+Shift+G do the same job.
+    button too many - there a selection and Alt+Shift+B do the same job.
 
     It is shown ON A SIGNAL, not on a timer and not on a guess. The plugin host
     answers `editor: true` right on `ready`; the site host answers `hello`
@@ -1628,10 +1706,17 @@ function answer(m) {
     if (m.editor) document.querySelectorAll(".npp-only").forEach(b => b.hidden = false);
     else document.querySelectorAll(".web-only").forEach(b => b.hidden = false);
     if (m.budgets) document.querySelectorAll(".budget-only").forEach(b => b.hidden = false);
+    /*
+      The version handshake. The host is older than our knowledge of it - we
+      keep quiet: that is the showcase or a build without a version, and there
+      is nobody to frighten there. They disagree - we say so aloud and name
+      BOTH numbers: without them the person cannot tell what to reinstall.
+    */
+    if (m.version && m.version !== PAGE_VERSION) staleHalves(m.version);
     return;
   }
   if (m.type === "suggest") {
-    // The pick-up is released - the live roads keep quiet. Alt+Shift+G (adopt) always works:
+    // The pick-up is released - the live roads keep quiet. Alt+Shift+B (adopt) always works:
 
     if (!liveCatch || rowEditing || editing()) return;
     const text = (m.text || "").trim();
@@ -1654,7 +1739,7 @@ function answer(m) {
   /*
     A PREVIEW OF THE SELECTION. Asked for by the user on 17.08.2026: "I selected
     the contents of a csv table with coordinates and GraphBuilder reacted at
-    once, as if Alt+Shift+G had been pressed".
+    once, as if Alt+Shift+B had been pressed".
 
     The rule of a replaceable slot was already there in suggest, and here it is
     EXTENDED to tables and to several formulas. The difference between the three
@@ -1663,7 +1748,7 @@ function answer(m) {
       suggest - one formula under the cursor, one slot, the next pickup replaces
       preview - the whole selection: a table OR several formulas, the same slot,
                 the next selection overwrites it. Nothing accumulates
-      adopt   - Alt+Shift+G, a deliberate act: the same, but FOR GOOD
+      adopt   - Alt+Shift+B, a deliberate act: the same, but FOR GOOD
 
     Why nothing may accumulate and why the slot is one: the selection changes on
     every drag of the mouse and on every Shift+arrow. Adding up what is shown
@@ -1720,7 +1805,7 @@ function answer(m) {
     if (table) {
       /*
         What has already been taken for good is not shown again. Otherwise it
-        would go like this: Alt+Shift+G is pressed, the table lies down as a
+        would go like this: Alt+Shift+B is pressed, the table lies down as a
         permanent series, the selection stays as it was - and the very next
         notification of the editor would put a preview copy of the same points
         on top of it.
@@ -1828,6 +1913,28 @@ function answer(m) {
     data.extremes = data.seg.length
       ? { max: m.max || [], min: m.min || [] }
       : { max: [], min: [] };
+    paint();
+    return;
+  }
+  /*
+    FIT TO SCREEN. The host picks the view - only it has the parser - and the
+    page applies it and keeps its own mirror of the view in step with it.
+
+    A refusal is shown IN WORDS in the status line. A button that sometimes
+    silently does nothing reads as broken, and there are three reasons to
+    refuse here, all of them lawful: nothing to fit, the values are not finite,
+    the view came out beyond bounds.
+  */
+  if (m.type === "fit") {
+    if (!m.ok) {
+      say("could not fit:" + (m.note || "no reason given"), 4000);
+      return;
+    }
+    if ("maxX" in m) view.w = m.maxX;
+    if ("maxY" in m) view.h = m.maxY;
+    if ("centerX" in m) view.cx = m.centerX;
+    if ("centerY" in m) view.cy = m.centerY;
+    syncControls();
     paint();
     return;
   }
@@ -2146,6 +2253,26 @@ const demoPolarMode = message =>
   (message && message.cs ? message.cs
     : el("cs").querySelector('[aria-pressed="true"]').dataset.cs) === "polar";
 
+/*
+  The middle share of a list of values: the centre and half the height.
+
+  Two per cent is dropped from each end - exactly so that an asymptote does not
+  decide for everyone. For 1/x the largest value runs off to infinity, and a
+  view by the full spread would turn the curve into a straight line at zero.
+
+  A height of zero is not allowed: a constant function would give a view of
+  zero, and that is a division by zero when converting to pixels.
+*/
+function middleOf(list) {
+  const a = list.slice().sort((p, q) => p - q);
+  const cut = Math.trunc(a.length * 0.02);
+  const lo = a[cut], hi = a[a.length - 1 - cut];
+  const centre = (lo + hi) / 2;
+  let half = (hi - lo) / 2;
+  if (!(half > 0)) half = 1;
+  return { centre, half: half * 1.06 };
+}
+
 function demo(message) {
   const fn = demoCartesian;
   if (message.cmd === "build" || message.cmd === "options") {
@@ -2181,6 +2308,47 @@ function demo(message) {
       Object.assign({ type: "extremes" }, demoPeaks(shown, false))), 60);
     return;
   }
+  if (message.cmd === "fit") {
+    /*
+      The same fitting the host does, but over the showcase curves: the middle
+      share of the values instead of the spread. Without this branch the button
+      on the demo page would say nothing, and the person would decide the
+      plugin is broken.
+    */
+    const polar = demoPolarMode(message);
+    const ys = [], xs = [];
+    curves.forEach((c, i) => {
+      if (!(c.on && c.trace)) return;
+      for (let k = 0; k <= 1200; k++) {
+        if (polar) {
+          const t = k / 1200 * Math.PI * 2, r = demoPolarRadius(i, t);
+          const x = r * Math.cos(t), y = r * Math.sin(t);
+          if (Number.isFinite(x)) xs.push(x);
+          if (Number.isFinite(y)) ys.push(y);
+        } else {
+          const x = view.cx - view.w + (k / 1200) * view.w * 2;
+          const y = fn[i % fn.length](x);
+          if (Number.isFinite(y)) ys.push(y);
+        }
+      }
+    });
+    if (ys.length < 8) {
+      answer({ type: "fit", ok: false,
+        note: "the curve gave no finite values over this range" });
+      return;
+    }
+    const got = { type: "fit", ok: true, note: "fitted over" + ys.length + " values" };
+    const mid = middleOf(ys);
+    got.maxY = mid.half;
+    got.centerY = mid.centre;
+    if (polar && xs.length >= 8) {
+      const midX = middleOf(xs);
+      got.maxX = midX.half;
+      got.centerX = midX.centre;
+    }
+    answer(got);
+    return;
+  }
   if (message.cmd === "trace") {
     const t = message.param;
     /*
@@ -2213,6 +2381,13 @@ function demo(message) {
     // Clearing a cell. The only way to free it: loading now
     // so, and without this branch ten occupied slots would be a dead end.
     if (message.mode === "drop") demoMarks[message.slot] = null;
+    /*
+      A cell copied into a cell. The showcase has a store of its own, so the
+      branch is needed here too: without it "Paste" on the demo page would say
+      nothing, and the person would decide the plugin is broken.
+    */
+    if (message.mode === "copy" && demoMarks[message.from])
+      demoMarks[message.slot] = demoMarks[message.from];
     answer({ type: "bookmarks", slots: demoMarks.map(Boolean) });
     return;
   }
@@ -2934,10 +3109,37 @@ function openPen(anchor, index) {
   with what was typed into it. Found by the audit of 20.08.2026, section 10 of
   #FULL-AUDIT: your own state goes stale because of somebody else's context.
 
-  Deliberate actions of the person - Alt+Shift+G, a paste - do not keep quiet:
+  Deliberate actions of the person - Alt+Shift+B, a paste - do not keep quiet:
   they started them, and answering with silence would be worse.
 */
 let rowEditing = false;
+/*
+  A REDRAW THAT CAME FROM OUTSIDE DOES NOT CARRY AWAY AN OPEN EDIT.
+
+  The list is redrawn for two different reasons, and they are NOT equal:
+
+    by the person      they pressed a bookmark, an undo, a clear, an eye. The
+                       row goes away by their own gesture, and an open edit
+                       MUST be cancelled - accepting a half-typed thing is not
+                       allowed, it would land on top of what they had just
+                       restored;
+    by itself          the engine answer to the PREVIOUS action arrived, a
+                       pick-up came from the editor, a table of series came in,
+                       the host returned a state. The person pressed nothing
+                       here, and cancelling their edit is a loss with no cause.
+
+  The guard used to sit at individual messages: curves, suggest, preview. There
+  are a dozen and a half of them, the list grows, and every new one had to be
+  remembered. So the boundary is drawn ONCE, by source: while a host message is
+  being handled, drawPanel does not touch rows but marks the list as stale. The
+  edit will end, and finish redraws it itself, on both branches.
+
+  A counter rather than a flag: handling one message can call the handling of
+  another, and a flag cleared by the first return would open the way for the
+  rest.
+*/
+let fromHost = 0;
+let panelStale = false;
 /*
     The guard asks the EDIT ITSELF, not a flag about it.
 
@@ -3020,6 +3222,10 @@ function editRow(row, index) {
 }
 
 function drawPanel() {
+  // THE BOUNDARY BY SOURCE, see the note at fromHost above. A redraw during
+  // the handling of a host message is held back while an edit is open.
+  if (fromHost && editing()) { panelStale = true; return; }
+  panelStale = false;
   // The look window is tied to the circle of one particular row, and the rows here are
 
   closePen();
@@ -3731,6 +3937,49 @@ function closeMarkMenu() {
   document.removeEventListener("mousedown", markAway, true);
 }
 
+/*
+  The cell taken for copying. Asked for by bms-2015 in issue #7: the bookmark
+  menu stood idle, and there was no way to move a state from one cell to
+  another.
+
+  The buffer is kept on the page rather than in the host: it lives exactly
+  until the next "Copy" and is saved nowhere. The copying itself is done by the
+  host - it moves the cell FILE without touching the current graph.
+*/
+let markClip = -1;
+
+/*
+  THE PAGE VERSION. The plugin is TWO parts, the library and this page, and the
+  Notepad++ plugin manager puts an update ON TOP of the old folder. What
+  exactly it puts there - only the library or the whole archive - has not been
+  measured.
+
+  Silence here is worse than a breakage: a new library with an old page will
+  say nothing, the panel will open, and part of the commands will not work -
+  and the person will decide the plugin is broken.
+
+  The number has to match PluginVersion in Share.pas and uShare.pas and
+  ProductVersion in the project file; a gate watches over that.
+*/
+const PAGE_VERSION = "1.3.5";
+
+/*
+  The halves disagree. The notice stays in view and does not close: while the
+  mismatch is alive, any oddity in the work is explained by it.
+*/
+function staleHalves(libVersion) {
+  let box = document.getElementById("staleHalves");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "staleHalves";
+    box.className = "stale-halves";
+    document.body.appendChild(box);
+  }
+  box.textContent = "The plugin is assembled from mismatched halves: library" + libVersion
+    + ", page" + PAGE_VERSION + ". Unpack the release archive as a whole -"
+    + "the library and the ui folder together. Some commands will not work otherwise.";
+}
+
 function markAway(ev) {
   if (markMenu && !markMenu.contains(ev.target)) closeMarkMenu();
 }
@@ -3743,9 +3992,13 @@ function openMarkMenu(anchor, slot) {
   const box = document.createElement("div");
   box.className = "pen-pop mark-menu";
   box.dataset.slot = String(slot);
+  const full = marks[slot] === 1;
+  const canPaste = markClip >= 0 && markClip !== slot && marks[markClip] === 1;
   box.innerHTML =
-    '<button class="reset" data-do="save">Write over</button>' +
-    '<button class="reset" data-do="drop">Clear</button>';
+    (full ? '<button class="reset" data-do="save">Write over</button>' : '') +
+    (full ? '<button class="reset" data-do="pick">Copy</button>' : '') +
+    (canPaste ? '<button class="reset" data-do="paste">Paste from ' + (markClip + 1) + '</button>' : '') +
+    (full ? '<button class="reset" data-do="drop">Clear</button>' : '');
   document.body.appendChild(box);
 
   const at = anchor.getBoundingClientRect();
@@ -3758,8 +4011,16 @@ function openMarkMenu(anchor, slot) {
 
   box.querySelectorAll("[data-do]").forEach(b => {
     b.onclick = () => {
+      const act = b.dataset.do;
       closeMarkMenu();
-      send({ cmd: "bookmark", slot: slot, mode: b.dataset.do });
+      /*
+        "Copy" sends nothing to the host: it only remembers WHERE to take it
+        from. Only the paste is sent, and the source slot travels with it in
+        the from field - otherwise the host would not know what to copy.
+      */
+      if (act === "pick") { markClip = slot; drawMarks(); return; }
+      if (act === "paste") { send({ cmd: "bookmark", slot: slot, mode: "copy", from: markClip }); return; }
+      send({ cmd: "bookmark", slot: slot, mode: act });
     };
   });
 
@@ -3810,10 +4071,16 @@ function drawMarks() {
     };
     cell.appendChild(b);
 
-    if (full) {
+    /*
+      The caret is needed on an EMPTY cell too, when something has been taken
+      for copying: otherwise there would be nowhere to paste - an empty cell
+      saves on a click.
+    */
+    if (full || (markClip >= 0 && markClip !== i && marks[markClip] === 1)) {
       const caret = document.createElement("button");
       caret.className = "mark-caret";
-      caret.title = "Write over or clear";
+      caret.title = full ? "Overwrite, copy or clear"
+                         : "Paste bookmark here" + (markClip + 1);
       caret.setAttribute("aria-label", "What to do with bookmark" + (i + 1));
       caret.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true">'
                       + '<path d="M2 4.5L6 8.5L10 4.5" fill="none"'
@@ -4305,10 +4572,40 @@ function statusView() {
   el("statView").textContent = fmt(view.cx) + "; " + fmt(view.cy);
 }
 
+/*
+  THE STATUS LINE WITH A HOLD.
+
+  The refusal "could not fit" was written straight into the status line and
+  lived there until the first foreign write. And that write comes on its own: a
+  deferred rebuild started BEFORE the press answers with a number of points a
+  fraction of a second later and wipes the reason out. From the person's side
+  this looks exactly like what we were trying to avoid: pressed it - nothing
+  happened.
+
+  Caught by a stand scene rather than by eye: in the scene the press follows
+  the change of state immediately, and the race reproduces there every time.
+
+  So an important message has a period during which it is not overwritten. Four
+  seconds - long enough to read, not long enough to forget.
+*/
+let statusHold = 0;
+
+function say(text, keepFor) {
+  statusHold = keepFor ? Date.now() + keepFor : 0;
+  el("status").textContent = text;
+  el("status").title = text;
+}
+
+function sayIfFree(text) {
+  if (Date.now() < statusHold) return;
+  el("status").textContent = text;
+  el("status").title = text;
+}
+
 // While the countdown to a recount or the computation itself is going on, that is shown rather than the old number.
 function busyHint(on) {
   document.querySelector(".statusbar").classList.toggle("busy", !!on);
-  if (on) el("status").textContent = "computing...";
+  if (on) sayIfFree("computing...");
 }
 
 /*
@@ -4460,6 +4757,8 @@ const zoomBy = k => { view.w *= k; view.h *= k; paint(); requestRebuild(); };
 zoomBtns[0].onclick = () => zoomBy(1 - (opt.zoomIn || .1));
 zoomBtns[1].onclick = () => zoomBy(1 + (opt.zoomOut || .1));
 zoomBtns[2].onclick = () => { view.cx = 0; view.cy = 0; paint(); requestRebuild(); };
+// The host picks the view: the page has no parser for formulas.
+zoomBtns[3].onclick = () => send({ cmd: "fit" });
 
 el("tools").addEventListener("click", e => {
   const b = e.target.closest("button[data-t]");
@@ -4906,7 +5205,7 @@ function setLive(on, quiet) {
   btn.setAttribute("aria-pressed", String(liveCatch));
   btn.title = liveCatch
     ? "Live pick-up from the editor is on"
-    : "Live pick-up is off: Alt+Shift+G only";
+    : "Live pick-up is off: Alt+Shift+B only";
   /*
     Turning it off removes what the live roads have already shown: otherwise a
     curve the person has just forbidden to pick up would stay on the canvas with
@@ -5000,13 +5299,35 @@ el("refresh").onclick = build;
   - it is a separate gesture now (Ctrl+click) - but it cannot be undone.
 */
 const undoStack = [];
+const redoStack = [];
 const UndoDepth = 20;
 
+/*
+  Redo.
+
+  Asked for by bms-2015, issue #10 of 28.08.2026: "since there is an undo,
+  a redo would be worth having - a way back to what was already there".
+
+  The remark is fair. Undo walks back a step at a time, the way back is
+  known, and the step it undid was perfectly good work. From where the user
+  stands, losing it looks like a defect of the program, however correct it
+  is formally.
+
+  Built the way undo is: the whole state is taken through state(), the one
+  description of what is on screen. Redo is where those snapshots go.
+
+  THE TRAIL IS DROPPED. Any new action drops the trail of redos. Without
+  that the history forks - undo two steps, do a third, and there is no
+  telling what "forward" would mean. The rule is the common one, and people
+  have it in their fingers whether or not they can name it.
+*/
 function remember(what) {
   undoStack.push({ what: what, snap: state() });
   // The depth is limited: a snapshot carries every formula and setting, and the panel lives in
   // memory does not grow.
   if (undoStack.length > UndoDepth) undoStack.shift();
+  // Any action drops the redo trail - see the note above.
+  redoStack.length = 0;
   syncUndo();
 }
 
@@ -5017,17 +5338,37 @@ function syncUndo() {
   // The hint names WHAT exactly will be undone: an "undo" with no object makes a person
 
   b.title = last ? "Undo: " + last.what : "Nothing to undo";
+  const r = el("redoBtn");
+  const next = redoStack[redoStack.length - 1];
+  r.disabled = !next;
+  r.title = next ? "Redone: " + next.what : "Nothing to redo";
 }
 
 function undo() {
   const last = undoStack.pop();
   if (!last) return;
+  // The state goes into the snapshot before it is overwritten: otherwise
+  // there would be nothing to come back to, and the first step back would lose it.
+  redoStack.push({ what: last.what, snap: state() });
+  if (redoStack.length > UndoDepth) redoStack.shift();
   applySnapshot(last.snap);
   syncUndo();
   build();
 }
 
+function redo() {
+  const next = redoStack.pop();
+  if (!next) return;
+  // The mirror of undo: what is on screen now becomes undoable again.
+  undoStack.push({ what: next.what, snap: state() });
+  if (undoStack.length > UndoDepth) undoStack.shift();
+  applySnapshot(next.snap);
+  syncUndo();
+  build();
+}
+
 el("undoBtn").onclick = undo;
+el("redoBtn").onclick = redo;
 
 /*
   The state of the graph to the clipboard and back - the same actions that were
@@ -5291,12 +5632,18 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") histShow(fal
   typing undone, not a deleted list brought back.
 */
 document.addEventListener("keydown", e => {
-  if (!(e.ctrlKey || e.metaKey) || e.shiftKey) return;
-  if (String(e.key).toLowerCase() !== "z") return;
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const key = String(e.key).toLowerCase();
+  // Two shortcuts, both of them familiar: Ctrl+Y comes from the Windows
+  // editors, Ctrl+Shift+Z from everything else. Keeping one would mean
+  // arguing with half the users habits.
+  const back = (key === "z" && !e.shiftKey);
+  const forth = (key === "y" && !e.shiftKey) || (key === "z" && e.shiftKey);
+  if (!back && !forth) return;
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
   e.preventDefault();
-  undo();
+  if (back) undo(); else redo();
 });
 el("hist").addEventListener("click", e => e.stopPropagation());
 
@@ -5383,6 +5730,20 @@ reportPanel.addEventListener("wheel", e => e.stopPropagation(), { passive: true 
 reportPanel.addEventListener("mousedown", e => e.stopPropagation());
 reportPanel.addEventListener("mousemove", e => e.stopPropagation());
 el("panelHead").addEventListener("click", () => fnPanel.classList.toggle("folded"));
+/*
+  Put away and bring back. stopPropagation is required: the button lies IN THE
+  HEADER, and a click on the header folds the list - without it the panel would
+  go away folded and come back the same, which the person did not ask for.
+*/
+el("panelHide").addEventListener("click", ev => {
+  ev.stopPropagation();
+  fnPanel.classList.add("away");
+  el("panelShow").classList.add("on");
+});
+el("panelShow").addEventListener("click", () => {
+  fnPanel.classList.remove("away");
+  el("panelShow").classList.remove("on");
+});
 el("panelAdd").addEventListener("click", () => el("formula").focus());
 
 drawPanel();

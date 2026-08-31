@@ -39,7 +39,8 @@ type
     procedure DoNppnToolbarModification; override;
     procedure DoNppnDarkModeChanged; override;
     function Theme: TThemeKind; virtual;
-    function HostBookmark(const Slot: Integer; const Mode: string): string; virtual;
+    function HostBookmark(const Slot: Integer; const Mode: string;
+      const From: Integer): string; virtual;
     function HostReport: string; virtual;
     procedure WebToEditor(const NewDocument: Boolean); virtual;
     property LineThread: TSearchThread read FLineThread write FLineThread;
@@ -317,7 +318,8 @@ end;
 constructor TPlugin.Create;
 const
   GB = 'Graph Builder';
-  G = 'G';
+  OpenKey = 'B';
+  GrabKey = 'B';
   AdoptItemCaption = 'Plot the selection';
 var
   SK: TShortcutKey;
@@ -329,12 +331,12 @@ begin
   PluginName := GB;
   FillChar(SK, SizeOf(TShortcutKey), 0);
   SK.IsAlt := True;
-  SK.Key := G;
+  SK.Key := OpenKey;
   AddFuncItem(GB, Plugin.Start, SK);
   FillChar(SK, SizeOf(TShortcutKey), 0);
   SK.IsAlt := True;
   SK.IsShift := True;
-  SK.Key := G;
+  SK.Key := GrabKey;
   AddFuncItem(AdoptItemCaption, Plugin.AdoptSelection, SK);
 end;
 
@@ -442,17 +444,9 @@ begin
 end;
 
 function TPlugin.HostReport: string;
-var
-  Producer: TPageProducer;
-  Template: string;
 begin
   if not Assigned(Main) then Exit('');
-  Producer := TPageProducer(Main.FindComponent('PP'));
-  if Assigned(Producer) then
-    Template := Producer.Content
-  else
-    Template := '<html><head></head><body></body></html>';
-  Result := ReportFacts.Extend(Template, Main.Graph, DarkMode);
+  Result := ReportFacts.Extend('<html><head></head><body></body></html>', Main.Graph, DarkMode);
 end;
 
 function TPlugin.Theme: TThemeKind;
@@ -463,7 +457,7 @@ begin
     Result := tkLight;
 end;
 
-function TPlugin.HostBookmark(const Slot: Integer; const Mode: string): string;
+function TPlugin.HostBookmark(const Slot: Integer; const Mode: string; const From: Integer): string;
 var
   Name: string;
   Cell: TCustomAction;
@@ -490,6 +484,11 @@ begin
       FWeb.PenColor := TMainAccess(Main).PagePenColor;
       FWeb.RefreshFromGraph;
     end;
+  end
+  else if Mode = 'copy' then
+  begin
+    if (From >= 0) and (From <= 9) and (From <> Slot) then
+      TMainAccess(Main).CopyState('B' + IntToStr(From), Name);
   end
   else if Mode = 'drop' then
     TMainAccess(Main).DropState(Name);

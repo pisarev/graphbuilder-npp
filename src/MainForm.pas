@@ -15,10 +15,9 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, IniFiles, Graphics, Controls, Forms, Dialogs,
-  ActnList, ActnMan, StdCtrls, Buttons, Grids, ExtCtrls, ComCtrls, Contnrs, HTTPProd,
-  SHDocVw, XPStyleActnCtrls, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms,
-  NotepadPP.Docking, BlobManager, FastList, CrossGraph.Types, CrossGraph.Engine,
-  CrossGraph;
+  ActnList, ActnMan, StdCtrls, Buttons, Grids, ExtCtrls, ComCtrls, Contnrs, SHDocVw,
+  XPStyleActnCtrls, NotepadPP.Types, NotepadPP.Plugin, NotepadPP.Forms, NotepadPP.Docking,
+  BlobManager, FastList, CrossGraph.Types, CrossGraph.Engine, CrossGraph;
 
 const
   FormulaSGCode = MaxWord;
@@ -190,7 +189,6 @@ type
     pFormula: TPanel;
     pGraph: TTabSheet;
     pL: TPanel;
-    PP: TPageProducer;
     pReport: TTabSheet;
     Splitter: TSplitter;
     WB: TWebBrowser;
@@ -254,8 +252,6 @@ type
     procedure PCChange(Sender: TObject);
     procedure SplitterMoved(Sender: TObject);
     procedure WBDocumentComplete(Sender: TObject; const pDisp: IDispatch; var URL: OleVariant);
-    procedure PPHTMLTag(Sender: TObject; Tag: TTag; const TagString: String; TagParams: TStrings;
-      var ReplaceText: String);
   private
     FReportLoaded: Boolean;
     FUpdateCount: Integer;
@@ -281,6 +277,7 @@ type
     function LoadState(const AName: string): Boolean; virtual;
     procedure SaveState(const AName: string; const FL: Boolean; const CS: PCoordinateSystem = nil); virtual;
     function HasState(const AName: string): Boolean; virtual;
+    procedure CopyState(const AFrom, ATo: string); virtual;
     procedure DropState(const AName: string); virtual;
     procedure BeginUpdate; virtual;
     procedure EndUpdate; virtual;
@@ -292,6 +289,13 @@ type
     property PageKeepRatio: Boolean read FPageKeepRatio write FPageKeepRatio;
     property PagePenColor: string read FPagePenColor write FPagePenColor;
     property ReportLoaded: Boolean read FReportLoaded write FReportLoaded;
+  public
+    FTitleBase: string;
+    FOpenKeys: string;
+    FGrabKeys: string;
+    procedure SyncTitle;
+  protected
+    procedure Resize; override;
   public
     constructor Create(NppParent: TNppPlugin; DlgId: Integer); override;
     constructor Create(AOwner: TNppForm; DlgId: Integer); override;
@@ -318,18 +322,6 @@ const
   ReportFileName = 'report.html';
   PointsExt = '.csv';
   GraphName = 'Graph';
-  DateTag = 'date';
-  HighPrecisionTag = 'highprecision';
-  DecimalPlacesTag = 'decimalplaces';
-  CSTag = 'cs';
-  CSCenterTag = 'cscenter';
-  CSSizeTag = 'cssize';
-  CSRangeTag = 'csrange';
-  FormulaTag = 'formula';
-  OverlapTag = 'overlap';
-  ExtremeTag = 'extreme';
-  VaryRadiusTag = 'varyradius';
-  VoidRadiusTag = 'voidradius';
   PanelSection = 'Panel';
   LBoxSection = 'LBox';
   CSSection = 'CS';
@@ -398,10 +390,10 @@ var
 implementation
 
 uses
-  ClipboardMonitor, DarkTheme, ReportFacts, WebPanel, Math, TypInfo, Types, CalcUtils,
-  CrossGraph.Geometry, CrossVision.Geometry.Types, MemoryUtils, Parser, ParseTypes,
-  StrUtils, TextBuilder, TextConsts, TextUtils, ValueTypes, ValueUtils, ZUtils,
-  NumberUtils;
+  ClipboardMonitor, DarkTheme, ReportFacts, Share, WebPanel, Math, TypInfo, Types,
+  CalcUtils, CrossGraph.Geometry, CrossVision.Geometry.Types, MemoryUtils, Parser,
+  ParseTypes, StrUtils, TextBuilder, TextConsts, TextUtils, ValueTypes, ValueUtils,
+  ZUtils, NumberUtils;
 
 {$R *.dfm}
 
@@ -1229,6 +1221,19 @@ begin
   Result := FManager.Find(AName, I);
 end;
 
+procedure TMain.CopyState(const AFrom, ATo: string);
+var
+  AFile: TMemIniFile;
+begin
+  if not HasState(AFrom) then Exit;
+  AFile := TMemIniFile.Create('');
+  try
+    if LoadFile(AFile, AFrom) then SaveFile(AFile, ATo);
+  finally
+    AFile.Free;
+  end;
+end;
+
 procedure TMain.DropState(const AName: string);
 var
   I: Integer;
@@ -1319,16 +1324,30 @@ begin
   inherited;
 end;
 
-constructor TMain.Create(NppParent: TNppPlugin; DlgId: Integer);
-var
-  Keys: string;
+procedure TMain.SyncTitle;
+const
+  Buttons = 72;
+begin
+  if FTitleBase = '' then Exit;
+  Caption := FitTitle(FTitleBase, FOpenKeys, FGrabKeys, ClientWidth - Buttons, Canvas.TextWidth);
+end;
+
+procedure TMain.Resize;
 begin
   inherited;
+  SyncTitle;
+end;
+
+constructor TMain.Create(NppParent: TNppPlugin; DlgId: Integer);
+begin
+  inherited;
+  FTitleBase := Caption;
   if Assigned(NppParent) then
   begin
-    Keys := Trim(NppParent.ShortcutText(DlgId));
-    if Keys <> '' then Caption := Caption + '  (' + Keys + ')';
+    FOpenKeys := Trim(NppParent.ShortcutText(DlgId));
+    FGrabKeys := Trim(NppParent.ShortcutText(DlgId + 1));
   end;
+  SyncTitle;
 end;
 
 procedure TMain.Next(const Control: TWinControl; const Forward: Boolean);
@@ -2303,8 +2322,8 @@ begin
     List := TStringList.Create;
     try
       ReportFacts.SavePoints(FGraph, ChangeFileExt(FileName, PointsExt));
-      List.Text := ReportFacts.Extend(PP.Content, FGraph, Assigned(Npp) and Npp.DarkMode,
-        ChangeFileExt(FileName, PointsExt));
+      List.Text := ReportFacts.Extend('<html><head></head><body></body></html>',
+        FGraph, Assigned(Npp) and Npp.DarkMode, ChangeFileExt(FileName, PointsExt));
       List.SaveToFile(FileName, TEncoding.UTF8);
     finally
       List.Free;
@@ -2325,375 +2344,6 @@ begin
   inherited;
   FReportLoaded := True;
   GPrint.Update;
-end;
-
-procedure TMain.PPHTMLTag(Sender: TObject; Tag: TTag; const TagString: String; TagParams: TStrings;
-  var ReplaceText: String);
-const
-  HighPrecisionTemplate = '<dd>%s</dd>';
-  DecimalPlacesTemplate = '<dd>%d</dd>';
-  CSTemplate = '<dd>%s</dd>';
-  RangeTemplate: array[TCoordinateSystem] of string = ('From %s to %s', 'From %s degrees (%s radians) to %s degrees (%s radians)');
-  CenterTemplate = '<dd>X: %s</dd><dd>Y: %s</dd>';
-  SizeTemplate = '<dd>Horizontal: %s</dd><dd>Vertical: %s</dd>';
-  FormulaTemplate = 'Y = %s';
-  ROTemplate = '<p><li>Name: %s<br>X: %s<br>Y: %s<br>Distance from center: %s<br>%s</li><p>';
-  ATemplate = '%s degrees (%s radians)';
-  POTemplate = '<p><li>Name: %s<br>Angle<ol><li>%s</li><li>%s</li></ol>X: %s<br>Y: %s<br>Distance from center: %s<br>%s</li></p>';
-  RETemplate = '<p><li>X: %s<br>Y: %s<br>Distance from center: %s</li><p>';
-  PETemplate = '<p><li>Angle: %s<br>X: %s<br>Y: %s<br>Distance from center: %s</li><p>';
-  VaryTemplate = '<dd>%s</dd>';
-  VoidTemplate = '<dd>%s</dd>';
-
-  function FromCenter(const Point: TPointD): string;
-  begin
-    if FGraph.XDigitCount > FGraph.YDigitCount then
-      Result := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), DistanceOf(ZeroPoint, Point))
-    else
-      Result := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), DistanceOf(ZeroPoint, Point));
-  end;
-
-  function FormatText(const Index: Integer; const Text: string): string;
-  const
-    Prefix = '<div style=''color: white; background-color:#%.2x%.2x%.2x''>';
-    Suffix = '</div>';
-  var
-    A, B: TColor;
-    I, J, K: Integer;
-  begin
-    A := ColorToRGB(clWhite);
-    B := FGraph.Formula.Data[Index].Color;
-    I := Blend(GetRValue(A), GetRValue(B), FGraph.SignBlendValue);
-    J := Blend(GetGValue(A), GetGValue(B), FGraph.SignBlendValue);
-    K := Blend(GetBValue(A), GetBValue(B), FGraph.SignBlendValue);
-    Result := Format(Prefix, [I, J, K]) + Text + Suffix;
-  end;
-
-  function FormatFormula(const Index: Integer): string;
-  var
-    Data: PFormulaData;
-  begin
-    Data := FGraph.Formula.Data[Index];
-    if Assigned(Data) then
-      if FGraph.MultiColor then
-        Result := FormatText(Index, Format(FormulaTemplate, [FGraph.Parser.ScriptToString(FGraph.SA[Data.ScriptIndex], rmUser)]))
-      else
-        Result := Format(FormulaTemplate, [FGraph.Parser.ScriptToString(FGraph.SA[Data.ScriptIndex], rmUser)])
-    else
-      Result := '';
-  end;
-
-  function AddExtreme(const Back, Face: TPlace; const EA: TCurveDArray): string;
-  var
-    Builder: TTextBuilder;
-    I, J, K, L: Integer;
-    Point: TPointD;
-    X, Y, A: string;
-  begin
-    Builder := TTextBuilder.Create;
-    try
-      for I := Back.ArrayIndex to Face.ArrayIndex do if GetRange(EA, Back, Face, I, K, L) then
-        for J := K to L do
-        begin
-          Point := EA[I, J];
-          X := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), Point.X);
-          Y := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), Point.Y);
-          case FGraph.CS of
-            csRectangular: Builder.Append(Format(RETemplate, [X, Y, FromCenter(Point)]));
-          else
-            A := Format(
-              ATemplate,
-              [
-                FormatFloat(
-                  FGraph.FloatFormat(FGraph.AngleFormat),
-                  RadToDeg(CounterClockwise(Point, LineAngle(Point, ZeroPoint)))
-                ),
-                FormatFloat(
-                  FGraph.FloatFormat(FGraph.AngleFormat),
-                  CounterClockwise(
-                    Point,
-                    LineAngle(
-                      Point,
-                      ZeroPoint
-                    )
-                  )
-                )
-              ]
-            );
-            Builder.Append(Format(PETemplate, [A, X, Y, FromCenter(Point)]));
-          end;
-        end;
-      Result := Builder.Text;
-    finally
-      Builder.Free;
-    end;
-  end;
-
-var
-  Builder: TTextBuilder;
-  RangeArray: CrossGraph.Engine.TRangeArray;
-  Display: TDisplay;
-  Min, Max, Angle: Extended;
-  I, J: Integer;
-  Overlap: TOverlap;
-  X, Y, A, B, C, D: string;
-  Data: PFormulaData;
-begin
-  if TextUtils.SameText(Trim(TagString), DateTag) then
-    ReplaceText := DateTimeToStr(Now)
-  else
-    if TextUtils.SameText(Trim(TagString), HighPrecisionTag) then
-      if FGraph.HighPrecision then
-        ReplaceText := Format(HighPrecisionTemplate, ['On'])
-      else
-        ReplaceText := Format(HighPrecisionTemplate, ['Off'])
-  else
-    if TextUtils.SameText(Trim(TagString), DecimalPlacesTag) then
-      ReplaceText := Format(DecimalPlacesTemplate, [DecimalPlaces])
-  else
-    if TextUtils.SameText(Trim(TagString), CSTag) then
-      case FGraph.CS of
-        csRectangular: ReplaceText := Format(CSTemplate, ['Rectangular'])
-      else
-        ReplaceText := Format(CSTemplate, ['Polar']);
-      end
-  else
-    if TextUtils.SameText(Trim(TagString), CSCenterTag) then
-      ReplaceText := Format(
-        CenterTemplate,
-        [
-          FormatFloat(
-            FGraph.FloatFormat(FGraph.XFormat),
-            -FGraph.Offset.X
-          ),
-          FormatFloat(
-            FGraph.FloatFormat(FGraph.YFormat),
-            -FGraph.Offset.Y
-          )
-        ]
-      )
-  else
-    if TextUtils.SameText(Trim(TagString), CSSizeTag) then
-      ReplaceText := Format(
-        SizeTemplate,
-        [
-          FormatFloat(
-            FGraph.FloatFormat(FGraph.XFormat),
-            FGraph.MaxX * 2
-          ),
-          FormatFloat(
-            FGraph.FloatFormat(FGraph.YFormat),
-            FGraph.MaxY * 2
-          )
-        ]
-      )
-  else
-    if TextUtils.SameText(Trim(TagString), CSRangeTag) then
-      case FGraph.CS of
-        csRectangular:
-          begin
-            Min := -FGraph.MaxX - FGraph.Offset.X;
-            Max := FGraph.MaxX - FGraph.Offset.X;
-            A := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), Min);
-            B := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), DegToRad(Min));
-            C := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), Max);
-            D := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), DegToRad(Max));
-            ReplaceText := '<dd>' + Format(RangeTemplate[FGraph.CS], [A, B, C, D]) + '</dd>';
-          end;
-      else
-        Builder := TTextBuilder.Create;
-        try
-          RangeArray := nil;
-          try
-            Display := FGraph.GetDisplay;
-            case Display.QuarterKind of
-              qkABCD:
-                CrossGraph.Engine.Add(RangeArray, CrossGraph.Engine.MakeRange(0, FGraph.PolarMaxAngle));
-            else
-              Angle := 0;
-              while Below(Angle, FGraph.PolarMaxAngle) do
-              begin
-                Min := Display.Range.Min + Angle;
-                Max := Display.Range.Max + Angle;
-                if Above(Min, Max) then Max := EnsureRange(Max + Angle360, 0, FGraph.PolarMaxAngle);
-                CrossGraph.Engine.Add(RangeArray, CrossGraph.Engine.MakeRange(Min, Max));
-                Angle := Angle + Angle360;
-              end;
-            end;
-            for I := Low(RangeArray) to High(RangeArray) do
-            begin
-              A := FormatFloat(FGraph.FloatFormat(FGraph.AngleFormat), RadToDeg(RangeArray[I].Min));
-              B := FormatFloat(FGraph.FloatFormat(FGraph.AngleFormat), RadToDeg(DegToRad(RangeArray[I].Min)));
-              C := FormatFloat(FGraph.FloatFormat(FGraph.AngleFormat), RadToDeg(RangeArray[I].Max));
-              D := FormatFloat(FGraph.FloatFormat(FGraph.AngleFormat), RadToDeg(DegToRad(RangeArray[I].Max)));
-              Builder.Append('<li>' + Format(RangeTemplate[FGraph.CS], [A, B, C, D]) + '</li>');
-            end;
-            ReplaceText := '<ol>' + Builder.Text + '</ol>';
-          finally
-            RangeArray := nil;
-          end;
-        finally
-          Builder.Free;
-        end;
-      end
-  else
-    if TextUtils.SameText(Trim(TagString), FormulaTag) then
-    begin
-      Builder := TTextBuilder.Create;
-      try
-        Builder.Append('<ol>');
-        for I := 0 to FGraph.Formula.Count - 1 do
-          if FGraph.Formula.Active[I] then Builder.Append('<li>' + FormatFormula(I) + '</li>');
-        Builder.Append('</ol>');
-        ReplaceText := Builder.Text;
-      finally
-        Builder.Free;
-      end;
-    end
-  else
-    if TextUtils.SameText(Trim(TagString), OverlapTag) then
-    begin
-      if FGraph.Overlap and not FGraph.Busy and (FGraph.Formula.ActiveCount > 0) then
-      begin
-        Builder := TTextBuilder.Create;
-        try
-          for I := 0 to FGraph.Formula.Count - 1 do if FGraph.Formula.Active[I] then
-          begin
-            Builder.Append('<p>' + FormatFormula(I) + '</p><ol style=''font-size: xx-small''>');
-            for J := Low(FGraph.OverlapArray) to High(FGraph.OverlapArray) do
-            begin
-              Overlap := FGraph.OverlapArray[J];
-              if ((Overlap.AFormula = I) or (Overlap.BFormula = I)) and
-                FGraph.Formula.Active[Overlap.AFormula] and
-                FGraph.Formula.Active[Overlap.BFormula] then
-                begin
-                  X := FormatFloat(FGraph.FloatFormat(FGraph.XFormat), Overlap.Point.X);
-                  Y := FormatFloat(FGraph.FloatFormat(FGraph.YFormat), Overlap.Point.Y);
-                  case FGraph.CS of
-                    csRectangular:
-                      if Overlap.AFormula = I then
-                        Builder.Append(Format(ROTemplate,
-                          [FGraph.OverlapName[J], X, Y, FromCenter(Overlap.Point), FormatFormula(Overlap.BFormula)]))
-                      else
-                        Builder.Append(Format(ROTemplate,
-                          [FGraph.OverlapName[J], X, Y, FromCenter(Overlap.Point), FormatFormula(Overlap.AFormula)]));
-                  else
-                    if FGraph.MultiColor then
-                    begin
-                      A := FormatText(
-                        Overlap.AFormula,
-                        Format(
-                          ATemplate,
-                          [
-                            FormatFloat(
-                              FGraph.FloatFormat(FGraph.AngleFormat),
-                              RadToDeg(Overlap.AAngle)
-                            ),
-                            FormatFloat(
-                              FGraph.FloatFormat(FGraph.AngleFormat),
-                              Overlap.AAngle
-                            )
-                          ]
-                        )
-                      );
-                      B := FormatText(
-                        Overlap.BFormula,
-                        Format(
-                          ATemplate,
-                          [
-                            FormatFloat(
-                              FGraph.FloatFormat(FGraph.AngleFormat),
-                              RadToDeg(Overlap.BAngle)
-                            ),
-                            FormatFloat(
-                              FGraph.FloatFormat(FGraph.AngleFormat),
-                              Overlap.BAngle
-                            )
-                          ]
-                        )
-                      );
-                    end
-                    else begin
-                      A := Format(
-                        ATemplate,
-                        [
-                          FormatFloat(
-                            FGraph.FloatFormat(FGraph.AngleFormat),
-                            RadToDeg(Overlap.AAngle)
-                          ),
-                          FormatFloat(
-                            FGraph.FloatFormat(FGraph.AngleFormat),
-                            Overlap.AAngle
-                          )
-                        ]
-                      );
-                      B := Format(
-                        ATemplate,
-                        [
-                          FormatFloat(
-                            FGraph.FloatFormat(FGraph.AngleFormat),
-                            RadToDeg(Overlap.BAngle)
-                          ),
-                          FormatFloat(
-                            FGraph.FloatFormat(FGraph.AngleFormat),
-                            Overlap.BAngle
-                          )
-                        ]
-                      );
-                    end;
-                    if Overlap.AFormula = I then
-                      Builder.Append(Format(POTemplate,
-                        [FGraph.OverlapName[J], A, B, X, Y, FromCenter(Overlap.Point), FormatFormula(Overlap.BFormula)]))
-                    else
-                      Builder.Append(Format(POTemplate,
-                        [FGraph.OverlapName[J], B, A, X, Y, FromCenter(Overlap.Point), FormatFormula(Overlap.AFormula)]));
-                  end;
-                end;
-            end;
-            Builder.Append('</ol>');
-          end;
-          ReplaceText := Builder.Text;
-        finally
-          Builder.Free;
-        end;
-      end;
-    end
-  else
-    if TextUtils.SameText(Trim(TagString), VaryRadiusTag) then
-      ReplaceText := Format(VaryTemplate,
-        [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVaryRadius)])
-  else
-    if TextUtils.SameText(Trim(TagString), VoidRadiusTag) then
-      ReplaceText := Format(VoidTemplate,
-        [FormatFloat(FGraph.FloatFormat(FGraph.XYFormat), FGraph.ExtremeVoidRadius)])
-  else
-    if TextUtils.SameText(Trim(TagString), ExtremeTag) then
-    begin
-      if FGraph.Extreme and not FGraph.Busy and (FGraph.Formula.ActiveCount > 0) then
-      begin
-        Builder := TTextBuilder.Create;
-        try
-          for I := 0 to FGraph.Formula.Count - 1 do if FGraph.Formula.Active[I] then
-          begin
-            Data := FGraph.Formula.Data[I];
-            if Assigned(Data) then
-            begin
-              A := Trim(AddExtreme(Data.MinBack, Data.MinFace, FGraph.MinArray));
-              if A <> '' then
-                Builder.Append('<p>' + FormatFormula(I) + '</p>Minimum:<ol style=''font-size: xx-small''>' + A + '</ol>');
-              A := Trim(AddExtreme(Data.MaxBack, Data.MaxFace, FGraph.MaxArray));
-              if A <> '' then
-                Builder.Append('Maximum:<ol style=''font-size: xx-small''>' + A + '</ol>');
-            end;
-          end;
-          ReplaceText := Builder.Text;
-        finally
-          Builder.Free;
-        end;
-      end;
-    end
-  else
-    ReplaceText := '';
 end;
 
 initialization

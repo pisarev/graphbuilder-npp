@@ -312,6 +312,22 @@ begin
   end;
 end;
 
+function Clipped(const Bar: TToolBar): Boolean;
+var
+  I: Integer;
+  Btn: TToolButton;
+begin
+  Result := False;
+  if not Assigned(Bar) then Exit;
+  for I := 0 to Bar.ButtonCount - 1 do
+  begin
+    Btn := Bar.Buttons[I];
+    if not Btn.Visible then Continue;
+    if (Btn.Left + Btn.Width > Bar.ClientWidth) or
+      (Btn.Top + Btn.Height > Bar.ClientHeight) then Exit(True);
+  end;
+end;
+
 procedure FitBars(const List: TArray<TBarRow>);
 var
   I: Integer;
@@ -325,7 +341,11 @@ begin
     List[I].Bar.Width := List[I].Width;
     while (List[I].Bar.RowCount > List[I].Rows) and (List[I].Bar.Font.Size > MinimumFontSize) do
       List[I].Bar.Font.Size := List[I].Bar.Font.Size - 1;
+    if List[I].Bar.RowCount > List[I].Rows then
+      List[I].Bar.AutoSize := True;
   end;
+  for I := Low(List) to High(List) do
+    if Clipped(List[I].Bar) then List[I].Bar.AutoSize := True;
 end;
 
 procedure PaintGrid(const Grid: TCustomGrid; const Colors: TThemeColors);

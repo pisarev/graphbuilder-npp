@@ -82,12 +82,12 @@ begin
   FShow.OnTimer := ShowSelection;
   FillChar(SK, SizeOf(TShortcutKey), 0);
   SK.IsAlt := True;
-  SK.Key := 'G';
+  SK.Key := 'B';
   AddFuncItem(PluginName, StartCommand, SK);
   FillChar(SK, SizeOf(TShortcutKey), 0);
   SK.IsAlt := True;
   SK.IsShift := True;
-  SK.Key := 'G';
+  SK.Key := 'B';
   AddFuncItem('Plot the selection', AdoptCommand, SK);
 end;
 

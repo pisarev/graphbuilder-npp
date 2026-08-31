@@ -10,8 +10,17 @@ unit Share;
 
 interface
 
+const
+  PluginVersion = '1.3.5';
+
 type
   TClipboardKind = (ckShare, ckState, ckPlain, ckBroken);
+
+type
+  TTextWidth = function(const Text: string): Integer of object;
+
+function FitTitle(const Base, OpenKeys, GrabKeys: string; const Room: Integer;
+  const Measure: TTextWidth): string;
 
 function ShareState(const Text: string): string;
 function ClipboardKind(const Text: string): TClipboardKind;
@@ -19,6 +28,27 @@ function ClipboardKind(const Text: string): TClipboardKind;
 implementation
 
 uses System.SysUtils, System.NetEncoding, System.JSON;
+
+function FitTitle(const Base, OpenKeys, GrabKeys: string; const Room: Integer;
+  const Measure: TTextWidth): string;
+var
+  Ladder: array[0..4] of string;
+  I: Integer;
+begin
+  Ladder[0] := Base + '  (' + OpenKeys + ', grab ' + GrabKeys + ')';
+  Ladder[1] := Base + '  (' + OpenKeys + ', ' + GrabKeys + ')';
+  Ladder[2] := Base + '  (' + GrabKeys + ')';
+  Ladder[3] := Base + '  (' + OpenKeys + ')';
+  Ladder[4] := Base;
+  for I := Low(Ladder) to High(Ladder) do
+  begin
+    if (Pos('()', Ladder[I]) > 0) or (Pos('(, ', Ladder[I]) > 0) or (Pos(', )', Ladder[I]) > 0) then
+      Continue;
+    if (Room <= 0) or not Assigned(Measure) then Exit(Ladder[I]);
+    if Measure(Ladder[I]) <= Room then Exit(Ladder[I]);
+  end;
+  Result := Base;
+end;
 
 const
   ShareMark = '#s=1.';
