@@ -27,8 +27,8 @@ jobs:
       working-directory: .\
       run: |
            cd ..
-           git clone --branch v1.3.4 --depth 1 https://github.com/pisarev/pascal-mathparser.git
-           git clone --branch v1.3.4 --depth 1 https://github.com/pisarev/pascal-crossgraph.git
+           git clone --branch v1.3.5 --depth 1 https://github.com/pisarev/pascal-mathparser.git
+           git clone --branch v1.3.5 --depth 1 https://github.com/pisarev/pascal-crossgraph.git
            cd .\graphbuilder-npp
            git clone --branch 1.0.4078.44 https://github.com/salvadordf/WebView4Delphi.git
            $env:WEBVIEW4DELPHI = '.\WebView4Delphi'
