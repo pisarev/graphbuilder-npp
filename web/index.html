@@ -924,7 +924,7 @@ select.num { text-align: left; width: 108px; }
     </div>
 
     <div class="field">
-      <span class="fx"><i>ƒ</i>(<i>x</i>) =</span>
+      <span class="fx">ƒ(x) =</span>
       <input id="formula" value="Sin(X)" spellcheck="false" placeholder="type a formula and press Enter">
       <button class="icon-btn" id="histBtn" title="Formula history" aria-label="Formula history" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -1056,7 +1056,7 @@ select.num { text-align: left; width: 108px; }
       <button class="icon-btn" title="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
       <button class="icon-btn" title="Zoom out"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
       <button class="icon-btn" title="Back to origin"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
-      <button class="icon-btn" title="Fit to screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M8.5 8.5h7v7h-7z"/></svg></button>
+      <button class="icon-btn" title="Fit the view"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M8.5 8.5h7v7h-7z"/></svg></button>
     </div>
 
     <div class="float tools" id="tools">
@@ -1423,9 +1423,30 @@ function currentCS() {
 }
 
 // The current sheet goes to the shelf, the new one comes off it (or the example).
+/*
+  THE ORIGIN MARK TRAVELS WITH THE CURVE.
+
+  Everything was copied here except `from`, and a curve came back from the
+  shelf without it. The `editor` mark survived, so the curve stayed an
+  "editor" one, yet it no longer remembered WHERE it had come from.
+
+  What that cost:
+
+    picked up by the caret     `from: "suggest"`, and clearing the selection
+                               does NOT remove it - deliberately, or else the
+                               case where one click sends two events breaks
+    after switching sheets     `from` is lost; dropPreview reads it as
+                               `one.from || "preview"`, so the curve turns
+                               into one "shown by selection" - and clearing
+                               the selection removes it
+
+  The same curve behaves differently before and after the switch. To a person
+  that looks like chance.
+*/
 function switchSheet(from, to) {
   shelf[from] = {
     formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor,
+      from: c.from || null,
       ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
     cleared: emptiedByUser && curves.length === 0
   };
@@ -1433,7 +1454,8 @@ function switchSheet(from, to) {
   curves.length = 0;
   if (next && Array.isArray(next.formulas) && (next.formulas.length || next.cleared)) {
     next.formulas.forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null,
-      editor: f.editor, ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
+      editor: f.editor, from: f.from || null,
+      ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
     emptiedByUser = next.cleared && curves.length === 0;
   } else {
     freshSheet().forEach(c => curves.push(c));
@@ -1731,7 +1753,32 @@ function fromHostAnswer(m) {
       curves.push({ text, on: true, trace: true, color: null, editor: true,
                     from: "suggest" });
     }
-    emptiedByUser = false;
+    /*
+      A PREVIEW DOES NOT UNDO A DELIBERATE EMPTYING.
+
+      An unconditional `emptiedByUser = false` stood here, and it disagreed
+      with the rule addSeries states in plain words: a preview is not a
+      person's intent, and it does not undo a list emptied on purpose. One
+      rule, two places, applied in one.
+
+      What that cost:
+
+        the panel is cleared by button  empty, and the "emptied by user" mark
+                                        IS set
+        the caret lands on a line       a curve is shown, and the mark was
+                                        cleared right here
+        the adopt key on text that
+        holds no formulas               the preview is dropped, curves are zero
+                                        again, and the mark is already gone:
+                                        the adopt branch leaves through
+                                        `if (!added) return` before reaching it
+        leave the sheet and return      the shelf is empty and NOT marked, so
+                                        freshSheet() hands out the built-in
+                                        example
+
+      The formulas look as if they came from nowhere: between the action and
+      their appearance stands a switch of sheets.
+    */
     drawPanel();
     build();
     return;
@@ -1917,7 +1964,7 @@ function fromHostAnswer(m) {
     return;
   }
   /*
-    FIT TO SCREEN. The host picks the view - only it has the parser - and the
+    FIT THE VIEW. The host picks the view - only it has the parser - and the
     page applies it and keeps its own mirror of the view in step with it.
 
     A refusal is shown IN WORDS in the status line. A button that sometimes
@@ -1934,8 +1981,59 @@ function fromHostAnswer(m) {
     if ("maxY" in m) view.h = m.maxY;
     if ("centerX" in m) view.cx = m.centerX;
     if ("centerY" in m) view.cy = m.centerY;
+    /*
+      Height is a RESULT, not a stored number, while the ratio is locked. The
+      view is chosen by the host: it has none of our fields, and the height
+      arrives computed from the data rather than from the shape of the canvas.
+      Storing it as it comes means showing a cell that is not square - the
+      curve would lie about its own steepness.
+
+      The same rule as in size() and in applySnapshot; here it had been
+      forgotten. Before the fix the view ratio was 0.105 against 0.486 of the
+      canvas, a disagreement of 78 per cent, and resizing the window healed it
+      - because size() recomputes and this path did not.
+    */
+    /*
+      WHEN THE ASPECT RATIO IS LOCKED, FITTING WIDENS THE VIEW.
+
+      Reported on 08.09.2026: the button appeared to do nothing but move the
+      view to the middle of the values. That is what it did. With the ratio
+      locked the height of the view follows from its width and the shape of the
+      canvas, so the height picked by the host was replaced as soon as it
+      arrived and only the centre survived. On a symmetric pair such as
+      Sqrt(1 - X*X) and -Sqrt(1 - X*X) that centre is zero.
+
+      Replacing the height is right in itself: otherwise the cell stops being
+      square. But since the width holds the height, the only way to fit the
+      curve is to widen. The width now grows until the height that follows from
+      it reaches the picked one.
+
+      IT WIDENS BUT DOES NOT NARROW. The horizontal range is the reader's to
+      set, so a view that already fits the curve is left alone.
+    */
+    let wider = false;
+    if (opt.keepRatio && canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+      const shape = canvas.clientHeight / canvas.clientWidth;
+      const wantH = "maxY" in m ? m.maxY : view.h;
+      const needW = wantH / shape;
+      if (needW > view.w) { view.w = needW; wider = true; }
+      view.h = view.w * shape;
+    }
     syncControls();
-    paint();
+    /*
+      A WIDER VIEW NEEDS A RECOMPUTE, NOT A REPAINT.
+
+      The host computes the points, and it computes them for the horizontal
+      range that was in force when the request was made. While fitting only
+      changed the height, the old points were still good: the range along X
+      stayed the same. Widening asks for what nobody has computed, and the
+      edges of the plot stay empty.
+
+      Reported on 08.09.2026: after the button was pressed all three curves
+      ended at about 0.85 while the view ran to 1.5, and any change of zoom
+      drew them whole - because a change of zoom orders a recompute by itself.
+    */
+    if (wider) build(); else paint();
     return;
   }
   if (m.type === "trace") {
@@ -2060,7 +2158,8 @@ function applySnapshot(m) {
   });
   curves.length = 0;
   (m.formulas || []).forEach(f => curves.push({ text: f.text, on: f.on, trace: f.trace, color: null,
-    editor: f.editor, ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
+    editor: f.editor, from: f.from || null,
+    ink: f.ink || null, wide: f.wide || null, dash: f.dash || null }));
   /*
     Series of data are restored together with the formulas. A snapshot with no
     series field is one from an older release or one that arrived by link: then
@@ -2087,7 +2186,8 @@ function applySnapshot(m) {
     const other = cur === "rect" ? "polar" : "rect";
     const brought = m.sheets && m.sheets[other];
     shelf[other] = (brought && Array.isArray(brought.formulas))
-      ? { formulas: brought.formulas.map(f => ({ text: f.text, on: f.on, trace: f.trace, editor: f.editor })),
+      ? { formulas: brought.formulas.map(f => ({ text: f.text, on: f.on, trace: f.trace, editor: f.editor,
+            from: f.from || null })),
           cleared: !!brought.cleared }
       : null;
     shelf[cur] = null;
@@ -2645,7 +2745,7 @@ function state() {
       lies in the formula itself; here it is in the list.
     */
     formulas: curves.map((c, i) => ({ text: c.text, on: c.on, trace: c.trace,
-      color: curveInk(c, i), editor: c.editor,
+      color: curveInk(c, i), editor: c.editor, from: c.from || null,
       ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
     cleared: emptiedByUser && curves.length === 0,
     /*
@@ -2662,7 +2762,12 @@ function state() {
       const cur = el("cs").querySelector('[aria-pressed="true"]').dataset.cs;
       const out = {};
       out[cur] = {
+        // `from` travels with the curve here as well: this is the state the
+        // host keeps between sessions. Without it, closing and opening the
+        // panel would mean the same as switching sheets - the curve would
+        // forget where it had come from.
         formulas: curves.map(c => ({ text: c.text, on: c.on, trace: c.trace, editor: c.editor,
+          from: c.from || null,
           ink: c.ink || null, wide: c.wide || null, dash: c.dash || null })),
         cleared: emptiedByUser && curves.length === 0
       };
@@ -3961,7 +4066,7 @@ let markClip = -1;
   The number has to match PluginVersion in Share.pas and uShare.pas and
   ProductVersion in the project file; a gate watches over that.
 */
-const PAGE_VERSION = "1.3.6";
+const PAGE_VERSION = "1.3.7";
 
 /*
   The halves disagree. The notice stays in view and does not close: while the
@@ -4256,16 +4361,64 @@ function paint() {
     ctx.stroke();
     ctx.fillStyle = css("--ink-faint");
     ctx.font = '11px "Segoe UI", system-ui, sans-serif';
-    const step = view.w > 12 ? 4 : 2;
+    /*
+      THE LABEL STEP IS COMPUTED FROM DENSITY, NOT PICKED FROM TWO RUNGS.
+
+      `view.w > 12 ? 4 : 2` stood here, with a loop over whole numbers. Three
+      faults came out of that:
+
+        one transition only     labels thinned exactly once, at a view of 12/13
+        a mess when zoomed out  at +-1000 five hundred labels went to the
+                                canvas: on 800 px that is under two pixels each
+        empty when zoomed in    at +-0.5 there are no whole numbers in view at
+                                all, and the axis was left without a label
+
+      The answer is not to hold on to whole numbers. The step is taken from the
+      series 1, 2, 5 and powers of ten in both directions: ... 0.1, 0.2, 0.5,
+      1, 2, 5, 10, 20, 50 ... Such a series reads without arithmetic in the
+      head, and it yields fractions once the view is finer than one unit.
+
+      The smallest gap between labels is in pixels, not in view units: what
+      matters to the eye is the distance on screen. See LabelGap below.
+    */
+    const LabelGap = 56;
+    const niceStep = (unitsPerPx, room) => {
+      const raw = Math.abs(unitsPerPx) * room;
+      if (!(raw > 0) || !isFinite(raw)) return 1;
+      const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      const norm = raw / mag;
+      return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+    };
+    /*
+      As many decimals as the step itself carries: with a step of 0.2 the label
+      reads "0.2", not "0.20000000000000004". Floating point leaves such tails
+      on every third multiplication, and without rounding they would go out
+      onto the axis.
+    */
+    const digitsFor = one => {
+      const s = String(one);
+      const at = s.indexOf(".");
+      return at < 0 ? 0 : Math.min(6, s.length - at - 1);
+    };
+    const label = (v, one) => {
+      const d = digitsFor(one);
+      const t = d ? v.toFixed(d) : String(Math.round(v));
+      // There is no minus zero on an axis: -0 comes from rounding to zero.
+      return t === "-0" || t === "-0.0" ? t.replace("-", "") : t;
+    };
+    const stepX = niceStep(view.w * 2 / Math.max(1, w), LabelGap);
+    const stepY = niceStep(view.h * 2 / Math.max(1, h), LabelGap);
     ctx.textAlign = "center";
-    for (let x = Math.ceil(view.cx - view.w); x <= view.cx + view.w; x++) {
-      if (x === 0 || x % step) continue;
-      ctx.fillText(String(x), toX(x, w), toY(0, h) + 15);
+    for (let i = Math.ceil((view.cx - view.w) / stepX); i * stepX <= view.cx + view.w; i++) {
+      if (i === 0) continue;
+      const x = i * stepX;
+      ctx.fillText(label(x, stepX), toX(x, w), toY(0, h) + 15);
     }
     ctx.textAlign = "right";
-    for (let y = Math.ceil(view.cy - view.h); y <= view.cy + view.h; y++) {
-      if (y === 0 || y % step) continue;
-      ctx.fillText(String(y), toX(0, w) - 7, toY(y, h) + 4);
+    for (let i = Math.ceil((view.cy - view.h) / stepY); i * stepY <= view.cy + view.h; i++) {
+      if (i === 0) continue;
+      const y = i * stepY;
+      ctx.fillText(label(y, stepY), toX(0, w) - 7, toY(y, h) + 4);
     }
     ctx.textAlign = "left";
   }
@@ -5483,6 +5636,19 @@ el("reportBtn").onclick = () => {
   const r = el("report");
   r.classList.toggle("on");
   el("reportBtn").setAttribute("aria-pressed", String(r.classList.contains("on")));
+  /*
+    THE CURSOR TELLS THE TRUTH ABOUT WHAT CAN BE DONE.
+
+    The canvas carries a hand in its usual state: the graph is dragged with the
+    mouse. In report mode dragging is refused - the press handler returns at
+    once - and the hand promises an action that will not happen.
+
+    An unfinished drag is dropped at the same time: if the button was released
+    outside the window, `mouseup` never reached us, and a closed hand would
+    have stayed on the canvas.
+  */
+  drag = null;
+  el("stage").style.cursor = r.classList.contains("on") ? "default" : "";
   // The engine computes the facts; on the demo (with no plugin) the stub of the page is left.
   if (r.classList.contains("on")) send({ cmd: "report" });
 };

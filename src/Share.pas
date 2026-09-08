@@ -11,7 +11,7 @@ unit Share;
 interface
 
 const
-  PluginVersion = '1.3.6';
+  PluginVersion = '1.3.7';
 
 type
   TClipboardKind = (ckShare, ckState, ckPlain, ckBroken);
@@ -35,7 +35,7 @@ var
   Ladder: array[0..4] of string;
   I: Integer;
 begin
-  Ladder[0] := Base + '  (' + OpenKeys + ', grab ' + GrabKeys + ')';
+  Ladder[0] := Base + '  (' + OpenKeys + ', plot the selection ' + GrabKeys + ')';
   Ladder[1] := Base + '  (' + OpenKeys + ', ' + GrabKeys + ')';
   Ladder[2] := Base + '  (' + GrabKeys + ')';
   Ladder[3] := Base + '  (' + OpenKeys + ')';

@@ -330,7 +330,8 @@ both, while `dcc64` given only `-U` stops at
 It is a working plugin. It is not a copy of the shipped file: a release is built
 from the monorepo these three repositories are exported from, with a project file
 of its own, and the library comes out a different size. A hash that does not
-match the archive means the build was yours, not that the download was broken.
+match the archive means the build was yours, not that something went wrong
+with the download.
 
 ## The library is not signed
 
