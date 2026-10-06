@@ -217,7 +217,7 @@ set WEBVIEW4DELPHI=%CD%\WebView4Delphi
 The `.lpk` goes as an argument of its own after `--add-package-link`; the built-in
 help reads as though it belongs to the switch, and that form does not work.
 
-The project links an executable, so the result is renamed and the two files the
+The project links an executable, so the result is renamed and the three files the
 panel needs are put beside it:
 
 ```
@@ -226,9 +226,18 @@ ren GraphBuilderLaz.exe GraphBuilderLaz.dll
 mkdir ui
 copy ..\..\..\WebView4Delphi\bin64\WebView2Loader.dll .
 copy ..\..\web\index.html ui\
+copy ..\..\web\syntax.xml .
 ```
 
-Then copy those three into `plugins\GraphBuilderLaz\`.
+Then copy those four into `plugins\GraphBuilderLaz\`, keeping `index.html` inside
+its `ui` folder.
+
+The reference of signs and functions goes beside the library and not into `ui`:
+inside the plugin the page does not read that file itself, it asks the host, and
+the host looks for `syntax.xml` next to its own library. Without it the panel
+opens and draws as usual, and only the reference button answers "The reference
+cannot be read" - which is what every install made by the 1.3.4 recipe did, so
+the file is named here rather than left to memory.
 
 #### Delphi, by script
 
@@ -299,16 +308,52 @@ goes:
     out\GraphBuilder.dll                        plugins\GraphBuilder\
     web\index.html                              plugins\GraphBuilder\ui\
     web\syntax.xml                              plugins\GraphBuilder\
-    %WEBVIEW4DELPHI%\bin64\WebView2Loader.dll   next to notepad++.exe
+    %WEBVIEW4DELPHI%\bin64\WebView2Loader.dll   plugins\GraphBuilder\
 
-The last row is the odd one, and it is worth knowing why. The panel is drawn by
-WebView2, and `TEdgeBrowser` asks for its loader by plain name. Windows looks
-for such a name in the folder of the running program - the editor - and never in
-the folder of the library that asks. A copy inside the plugin folder is
-therefore invisible to it. The file belongs in the same folder as the editor
-itself, which on a normal installation means:
+The loader lies beside the plugin, and since this release that is where the
+plugin takes it from. Each host names the path through the hook its own side
+provides, before creating the browser: the Lazarus host assigns
+`GlobalWebView2Loader.LoaderDllPath`, the Delphi host calls
+`Winapi.EdgeUtils.SetWebView2Path`, which is the variable the RTL then loads and
+takes the entry points from. The path taken goes into the log.
 
-    C:\Program Files\Notepad++\WebView2Loader.dll
+THE DELPHI HOOK EXISTS ONLY FROM **12 ATHENS** ON, and that is a measurement
+rather than a guess. Read on the test stand on 5 October 2026, in the RTL sources
+of each installed version: Studio `23.0` (12 Athens) and `37.0` (13) carry
+`SetWebView2Path` in the interface of `Winapi.EdgeUtils` and `sWebView2Path` in
+its implementation; Studio `22.0` (11 Alexandria) has the unit but not a single
+mention of `WebView2Path` in it; Studio `21.0` (10.4 Sydney) has no such unit at
+all. On 11 Alexandria - the floor this plugin promises - the call is therefore
+compiled out (`{$IF CompilerVersion >= 36}`) and the host is left with the
+pre-loading by full path alone, which is WEAKER: where another module with the
+same base name was loaded first, the browser keeps that one. The panel says so
+out loud instead of staying quiet - `panel: RTL has no WebView2 path hook, loader
+pre-loaded only` goes into the log. The matrix is what caught the unconditional
+call: on 11 Alexandria, where the pair is promised, the build failed with
+`E2003 Undeclared identifier`.
+
+Earlier the Delphi host asked for the file by plain name instead. Windows
+resolves such a name against the folder of the running program - the editor -
+and not against the folder of the library that asks, so in an editor that
+already carried another plugin's older `WebView2Loader.dll` that older copy won.
+Measured 03.10.2026 in the owner's editor with NppMarkdownPanel installed: the
+panel answered with a modal "Unsupported WebView2Loader.dll version! Expected
+1.0.4078.44, Found 1.0.3650.58" and did not open.
+
+Loading our own copy first is not enough on its own, and that is worth knowing
+if you write a plugin of your own: a request by plain name returns the FIRST
+module loaded under that base name, so where another plugin was earlier, a
+second copy from our folder sits in the process unused while the browser keeps
+the other one. Setting the path is what makes the choice ours, which is why the
+release battery now refuses either host creating a browser without naming the
+loader path - `TWVLoader.Create` without `LoaderDllPath`, or
+`TEdgeBrowser.Create` without `SetWebView2Path`. The gate reads the sources, so
+a call inside a version condition satisfies it; what it cannot see is which
+version a given build was made with, and that is what the log line above is for.
+
+`install.ps1 -Delphi` still leaves a second copy of the loader next to the
+editor. This plugin no longer needs it; it stays for anything else in the same
+process that asks by name, and because a shared process is not ours to tidy.
 
 Two places give you that file. The release archive carries it, so unpacking the
 archive anywhere and taking the one file out of it is the shortest way. The
@@ -327,11 +372,15 @@ both, while `dcc64` given only `-U` stops at
 
 #### What a build of your own is, and is not
 
-It is a working plugin. It is not a copy of the shipped file: a release is built
-from the monorepo these three repositories are exported from, with a project file
-of its own, and the library comes out a different size. A hash that does not
-match the archive means the build was yours, not that something went wrong
-with the download.
+It is a working plugin. It is not necessarily a copy of the shipped file. The
+shipped library is built from these very sources - `build-lazarus.ps1` over the
+project file in `lazarus\`, in a clean build configuration of its own - so a
+reader who runs the same script over the same tree builds the same plugin. The
+bytes still need not match: another Lazarus or FPC version, another output path,
+another build mode change them without changing behaviour, and the shipped file
+is built by a run that reports its own inputs. A hash that does not match the
+archive means the build was yours, not that something went wrong with the
+download.
 
 ## The library is not signed
 

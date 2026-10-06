@@ -13,10 +13,11 @@ unit WebPanel;
 interface
 
 uses
-  Winapi.Windows, Winapi.WebView2, System.Classes, System.SysUtils, System.JSON,
-  System.Generics.Collections, System.Types, System.Math, Vcl.Controls, Vcl.Forms,
-  Vcl.ExtCtrls, Vcl.Edge, Vcl.Graphics, CrossGraph, CrossGraph.Types, CrossGraph.Engine,
-  CrossVision.Geometry.Types, DarkTheme;
+  Winapi.Windows, Winapi.WebView2,
+  {$IF CompilerVersion >= 36}Winapi.EdgeUtils,{$ENDIF}
+  System.Classes, System.SysUtils, System.JSON, System.Generics.Collections, System.Types,
+  System.Math, Vcl.Controls, Vcl.Forms, Vcl.ExtCtrls, Vcl.Edge, Vcl.Graphics, CrossGraph,
+  CrossGraph.Types, CrossGraph.Engine, CrossVision.Geometry.Types, DarkTheme;
 
 type
   TBookmarkEvent = function(const Slot: Integer; const Mode: string;
@@ -171,6 +172,15 @@ begin
   Result := Folder + Places[Low(Places)];
 end;
 
+function LoaderFile: string;
+var
+  Buffer: array[0..MAX_PATH] of Char;
+begin
+  FillChar(Buffer, SizeOf(Buffer), 0);
+  GetModuleFileName(HInstance, Buffer, Length(Buffer));
+  Result := IncludeTrailingPathDelimiter(ExtractFilePath(Buffer)) + 'WebView2Loader.dll';
+end;
+
 function Number(const Value: Extended): string;
 begin
   Result := FloatToStrF(Value, ffGeneral, 15, Digits, TFormatSettings.Invariant);
@@ -283,6 +293,15 @@ begin
   LogStep('panel: page taken from ' + UiFile);
   if not Assigned(FBrowser) then
   begin
+    {$IF CompilerVersion >= 36}
+    SetWebView2Path(LoaderFile);
+    {$ELSE}
+    LogStep('panel: RTL has no WebView2 path hook, loader pre-loaded only');
+    {$ENDIF}
+    if LoadLibrary(PWideChar(LoaderFile)) = 0 then
+      LogStep('panel: LOADER NOT LOADED FROM ' + LoaderFile)
+    else
+      LogStep('panel: loader loaded from ' + LoaderFile);
     FBrowser := TEdgeBrowser.Create(Self);
     FBrowser.Parent := FHost;
     FBrowser.Align := alClient;
@@ -1128,6 +1147,7 @@ begin
       if not PostState then Post(Snapshot);
       Exit('');
     end;
+    LogStep('a command with no handler: ' + Value.Value);
   finally
     Root.Free;
   end;

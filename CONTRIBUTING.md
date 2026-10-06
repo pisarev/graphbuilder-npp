@@ -23,8 +23,11 @@ whole library and which needs a single file.
 - the panel is a web page and the computing is Object Pascal; a change that
   touches both has to keep them in step, and the page carries a version that the
   library checks on startup;
-- run the tests in tests/ and put in the pull request what you ran and what it
-  printed.
+- this repository carries no test suite of its own: the tests live in the
+  development tree the release is cut from and are run there before anything is
+  published. In the pull request, say what you built (which script, which
+  Lazarus or Delphi version), what the panel did, and paste the last lines of
+  the plugin log if anything looked wrong.
 
 ## Terms
 

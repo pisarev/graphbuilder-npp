@@ -11,7 +11,7 @@ unit Share;
 interface
 
 const
-  PluginVersion = '1.3.7';
+  PluginVersion = '1.3.8';
 
 type
   TClipboardKind = (ckShare, ckState, ckPlain, ckBroken);

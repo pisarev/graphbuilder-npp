@@ -146,18 +146,18 @@
     <item name="Script" params="1+" means="a script" example="script(a := 1; a + 1)">Runs the statements you list and hands back the last value. This is how a formula gets variables of its own.</item>
     <item name="Execute" params="2" means="run a compiled script" example="execute(s, x)">Runs a script that was compiled earlier.</item>
     <item name="For" params="4" means="counted loop" example="for(i, 1, 10, body)">A loop with its own counter.</item>
-    <item name="Repeat" params="2" means="a loop" example="repeat(10, a := a + 1)">Runs the body the number of times you name. A loop with no end is stopped by the run limit rather than by hanging the panel.</item>
+    <item name="Repeat" params="2" means="a loop, body first" example="repeat(body, cond)">Runs the body, then tests the condition, and repeats while the condition stays false - so the body runs at least once, and that is what tells it apart from while. The answer is the &quot;or&quot; of the answers the body gave. A counted loop is for. A loop with no end is stopped by the run limit rather than by hanging the panel.</item>
     <item name="While" params="2" means="loop" example="while(cond, body)">Repeats while the condition holds.</item>
     <item name="TryExcept" params="2" means="catch a failure" example="tryexcept(a, b)">Evaluates the first; if it refuses, evaluates the second.</item>
     <item name="TryFinally" params="2" means="always finish" example="tryfinally(a, b)">Evaluates the first and then the second, whether the first refused or not.</item>
     <item name="If" params="2-3" means="branch" example="if(x &gt; 0, x, -x)">Picks a branch and evaluates only that one.</item>
     <item name="Exit" means="leave" example="exit(value)">Ends the script with that answer.</item>
     <item name="IfThen" params="3" means="a choice" example="ifthen(x &gt; 0, 1, -1)">Takes the second value or the third. Only the branch it takes is evaluated.</item>
-    <item name="Parse" params="1" means="parse text" example="parse('2 + 2')">Reads an expression out of text and evaluates it.</item>
+    <item name="Parse" params="1" means="parse text" example="parse(&quot;2 + 2&quot;)">Reads an expression out of text and evaluates it.</item>
     <item name="Deriv" params="2-3" means="derivative" example="deriv(x ** 2, x)">The derivative.</item>
     <item name="GetEpsilon" means="current tolerance" example="getepsilon">The tolerance the comparisons use.</item>
     <item name="SetEpsilon" params="1" means="set the tolerance" example="setepsilon(1e-9)">Changes the tolerance the comparisons use.</item>
-    <item name="SetDecimalSeparator" params="1" means="set the separator" example="setdecimalseparator('.')">Changes the separator that reading text expects.</item>
+    <item name="SetDecimalSeparator" params="1" means="set the separator" example="setdecimalseparator(&quot;.&quot;)">Changes the separator that reading text expects.</item>
     <item name="GetYear" params="1" means="year of a value" example="getyear(x)">The year of a date held in a variable.</item>
     <item name="GetMonth" params="1" means="month of a value" example="getmonth(x)">The month of a date.</item>
     <item name="GetDay" params="1" means="day of a value" example="getday(x)">The day of a date.</item>
@@ -169,13 +169,13 @@
     <item name="GetTickCount" means="milliseconds since start" example="gettickcount">A counter that only goes forward; useful for timing.</item>
   </section>
   <section id="string" title="Strings">
-    <item name="StrToInt" params="1" means="text to a whole number" example="strtoint('42')">Reads a whole number from text; refuses anything else.</item>
-    <item name="StrToIntDef" params="2" means="text to a whole number, with a fallback" example="strtointdef('x', 0)">The same, but hands back the second value instead of refusing.</item>
-    <item name="StrToFloat" params="1" means="text to a number" example="strtofloat('2.5')">Reads a number from text; the separator is the one the system uses.</item>
-    <item name="StrToFloatDef" params="2" means="text to a number, with a fallback" example="strtofloatdef('x', 0)">The same, but hands back the second value instead of refusing.</item>
-    <item name="StrToDateTime" params="1" means="text to a date and time" example="strtodatetime('01.03.2026 12:30')">Reads a date with a time from text.</item>
-    <item name="StrToDate" params="1" means="text to a date" example="strtodate('01.03.2026')">Reads a date from text.</item>
-    <item name="StrToTime" params="1" means="text to a time" example="strtotime('12:30')">Reads a time of day from text.</item>
+    <item name="StrToInt" params="1" means="text to a whole number" example="strtoint(&quot;42&quot;)">Reads a whole number from text; refuses anything else.</item>
+    <item name="StrToIntDef" params="2" means="text to a whole number, with a fallback" example="strtointdef(&quot;x&quot;, 0)">The same, but hands back the second value instead of refusing.</item>
+    <item name="StrToFloat" params="1" means="text to a number" example="strtofloat(&quot;2.5&quot;)">Reads a number from text; the separator is the one the system uses.</item>
+    <item name="StrToFloatDef" params="2" means="text to a number, with a fallback" example="strtofloatdef(&quot;x&quot;, 0)">The same, but hands back the second value instead of refusing.</item>
+    <item name="StrToDateTime" params="1" means="text to a date and time" example="strtodatetime(&quot;01.03.2026 12:30&quot;)">Reads a date with a time from text.</item>
+    <item name="StrToDate" params="1" means="text to a date" example="strtodate(&quot;01.03.2026&quot;)">Reads a date from text.</item>
+    <item name="StrToTime" params="1" means="text to a time" example="strtotime(&quot;12:30&quot;)">Reads a time of day from text.</item>
   </section>
   <section id="time" title="Date and time">
     <item name="DateTime" means="now" example="datetime">The date with the time of day.</item>

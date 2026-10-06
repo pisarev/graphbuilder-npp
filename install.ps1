@@ -77,11 +77,13 @@ if (-not (Test-Path $Loader)) {
 }
 Copy-Item $Loader (Join-Path $Folder 'WebView2Loader.dll') -Force
 
-# And, for the Delphi build, next to the EDITOR as well. Windows resolves a
-# library asked for by plain name against the folder of the process executable,
-# not against the folder of the dll that asks. TEdgeBrowser asks by name, so for
-# it the copy beside the plugin is invisible; the Lazarus build computes the path
-# from its own module and needs only the one beside itself.
+# And, for the Delphi build, next to the EDITOR as well - as a courtesy, not as a
+# requirement. Since 1.3.8 both hosts load their own copy by full path from the
+# plugin folder before they create the browser, so this plugin no longer depends
+# on how Windows resolves a bare name. Windows still resolves such a name against
+# the folder of the process executable, and something else in the same editor may
+# ask that way; leaving the file there costs one copy and saves that caller a
+# failed search. The Lazarus build needs only the copy beside itself.
 if ($Delphi) {
     Copy-Item $Loader (Join-Path $Npp 'WebView2Loader.dll') -Force
 }

@@ -258,6 +258,8 @@ begin
     ForceDirectories(Cache);
     GlobalWebView2Loader := TWVLoader.Create(nil);
     GlobalWebView2Loader.UserDataFolder := Cache;
+    GlobalWebView2Loader.LoaderDllPath := PluginFolder + 'WebView2Loader.dll';
+    LogStep('Edge loader: loader path ' + string(GlobalWebView2Loader.LoaderDllPath));
     if GlobalWebView2Loader.StartWebView2 then
       LogStep('Edge loader: start requested')
     else

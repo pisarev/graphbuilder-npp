@@ -127,6 +127,8 @@ const
 
 procedure SeedPageDefaults(const Graph: TGraph);
 
+function PluginFolder: string;
+
 implementation
 
 uses uLazPlugin, uShare;
@@ -808,6 +810,7 @@ begin
       end;
       Exit('');
     end;
+    LogStep('a command with no handler: ' + Cmd);
   finally
     Data.Free;
   end;
